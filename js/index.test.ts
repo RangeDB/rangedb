@@ -1,18 +1,10 @@
-// @ts-check
-
+import { deepStrictEqual, rejects, strictEqual } from 'node:assert'
 import { describe, it, mock } from 'node:test'
-import { strictEqual, deepStrictEqual, rejects } from 'node:assert'
 import { RangeDB } from './index.js'
 
 const URL = 'https://rangedb.com/test.rangedb'
 
-/**
- *
- * @param {ArrayBuffer} arrayBuffer
- * @param {string} etag
- * @returns
- */
-const mockFetch = (arrayBuffer, etag = 'etag') =>
+const mockFetch = (arrayBuffer: ArrayBuffer, etag: string = 'etag') =>
   mock.method(global, 'fetch', () =>
     Promise.resolve({
       headers: {
@@ -26,9 +18,9 @@ describe('RangeDB', () => {
   describe('constructor', () => {
     it('should initialize with url and default options', () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.url, URL)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.firstReadSize, 64 * 1024)
     })
 
@@ -36,7 +28,7 @@ describe('RangeDB', () => {
       const db = new RangeDB(URL, {
         firstReadSize: 1024,
       })
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.firstReadSize, 1024)
     })
   })
@@ -44,14 +36,14 @@ describe('RangeDB', () => {
   describe('invalidate', () => {
     it('should reset header and index', () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.header = { some: 'data' }
-      // @ts-ignore
+      // @ts-expect-error
       db.index = new BigUint64Array(10).fill(7n)
       db.invalidate()
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.header, null)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.index, null)
     })
   })
@@ -65,22 +57,21 @@ describe('RangeDB', () => {
 
       const result = await db.readRange(0, 9)
       strictEqual(result, expectedBuffer)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.etag, etag)
     })
     it('should invalidate header and index if ETag changed', async () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.etag = 'old-etag'
-      // @ts-ignore
+      // @ts-expect-error
       db.header = { some: 'data' }
-      // @ts-ignore
       mockFetch(new ArrayBuffer(1), 'new-etag')
 
       await db.readRange(0, 0)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.header, null)
-      // @ts-ignore
+      // @ts-expect-error
       strictEqual(db.index, null)
     })
   })
@@ -113,8 +104,8 @@ describe('RangeDB', () => {
     })
     it('should read header', async () => {
       const db = new RangeDB(URL)
-      // prettier-ignore
-      const  {buffer} = new Uint8Array([
+      // biome-ignore format: easier to read
+      const { buffer } = new Uint8Array([
         0x52, 0x61, 0x6e, 0x67, 0x65, 0x44, 0x42, // magic 'RangeDB'
         1, // specVersion
         35, 0, 0, 0, // metadataOffset
@@ -148,14 +139,14 @@ describe('RangeDB', () => {
   describe('getIndex', () => {
     it('should return cached index', async () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.index = new BigUint64Array([1n, 2n, 3n, 4n])
       const count = await db.getIndex()
       strictEqual(count, 2)
     })
     it('should fail on wrong index type', async () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.header = {}
       const { buffer } = new Uint8Array(2)
       mockFetch(buffer)
@@ -165,14 +156,14 @@ describe('RangeDB', () => {
     })
     it('should read index', async () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.header = {}
 
-      // prettier-ignore
+      // biome-ignore format: easier to read
       const { buffer } = new Uint8Array([
-        1, // indexType
+        1,          // indexType
         2, 0, 0, 0, // count
-        0,0,0, // TODO: remove padding
+        0,0,0,      // TODO: remove padding
         // key                    | offset
         100, 0, 0, 0, 0, 0, 0, 0,  50, 0, 0, 0, 0, 0, 0, 0,
         200, 0, 0, 0, 0, 0, 0, 0,  250, 0, 0, 0, 0, 0, 0, 0,
@@ -180,7 +171,7 @@ describe('RangeDB', () => {
 
       mockFetch(buffer)
       const count = await db.getIndex()
-      // @ts-ignore
+      // @ts-expect-error
       deepStrictEqual(db.index, new BigUint64Array([100n, 50n, 200n, 250n]))
       strictEqual(count, 2)
     })
@@ -189,7 +180,7 @@ describe('RangeDB', () => {
   describe('getMetadata', () => {
     it('should return cached metadata', async () => {
       const db = new RangeDB(URL)
-      // @ts-ignore
+      // @ts-expect-error
       db.metadata = { key: 'value' }
       const metadata = await db.getMetadata()
       deepStrictEqual({ key: 'value' }, metadata)
@@ -197,11 +188,11 @@ describe('RangeDB', () => {
     it('should read metadata', async () => {
       const db = new RangeDB(URL)
 
-      // @ts-ignore
+      // @ts-expect-error
       db.header = {}
-      // prettier-ignore
       const { buffer } = new Uint8Array([
-        0x7B, 0x22, 0x6B, 0x65, 0x79, 0x22, 0x3A, 0x22, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x22, 0x7D
+        0x7b, 0x22, 0x6b, 0x65, 0x79, 0x22, 0x3a, 0x22, 0x76, 0x61, 0x6c, 0x75,
+        0x65, 0x22, 0x7d,
       ])
 
       mockFetch(buffer)

@@ -131,7 +131,7 @@ export class RangeDB {
 
     const specVersion = view.getUint8(7)
     if (specVersion !== 1) {
-      throw new Error('Unsupported spec version. Expected 1 got ' + specVersion)
+      throw new Error(`Unsupported spec version. Expected 1 got ${specVersion}`)
     }
     const metadataOffset = view.getUint32(8, true)
     const metadataLength = view.getUint32(12, true)
@@ -157,7 +157,7 @@ export class RangeDB {
   }
 
   /** Load index from database or return cached
-   * @returns{Promise<number>}
+   * @returns {Promise<number>}
    */
   async getIndex() {
     if (this.index) {
@@ -171,7 +171,7 @@ export class RangeDB {
 
     const indexType = view.getUint8(0)
     if (indexType !== 1) {
-      throw new Error('Unsuported index type: Expected 1 got ' + indexType)
+      throw new Error(`Unsuported index type: Expected 1 got ${indexType}`)
     }
     const count = view.getUint32(1, true)
 
