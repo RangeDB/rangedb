@@ -7,6 +7,12 @@
  */
 
 /**
+ * @typedef {Object} Range
+ * @property {bigint} [start]
+ * @property {bigint} [end]
+ */
+
+/**
  * @enum {number}
  */
 export const Compression = Object.freeze({
@@ -86,8 +92,8 @@ export class RangeDB {
 
   /**
    * Perform HTTP range request.
-   * @param {number} start
-   * @param {number} end
+   * @param {bigint} start
+   * @param {bigint} end
    * @returns {Promise<ArrayBuffer>}
    */
   async readRange(start, end) {
@@ -114,8 +120,7 @@ export class RangeDB {
     if (this.header) {
       return this.header
     }
-
-    const buffer = await this.readRange(0, this.firstReadSize)
+    const buffer = await this.readRange(0n, BigInt(this.firstReadSize))
     const view = new DataView(buffer)
 
     const magicNumber =
@@ -156,7 +161,8 @@ export class RangeDB {
     return this.header
   }
 
-  /** Load index from database or return cached
+  /**
+   * Load index from database or return cached
    * @returns {Promise<number>}
    */
   async getIndex() {
@@ -166,7 +172,10 @@ export class RangeDB {
 
     const { indexLength, indexOffset } = await this.getHeader()
 
-    const buffer = await this.readRange(indexOffset, indexLength)
+    const buffer = await this.readRange(
+      BigInt(indexOffset),
+      BigInt(indexLength),
+    )
     const view = new DataView(buffer)
 
     const indexType = view.getUint8(0)
@@ -179,7 +188,8 @@ export class RangeDB {
     return count
   }
 
-  /**  Get metadata from database or return cached
+  /**
+   * Get metadata from database or return cached
    * @return {Promise<JSONObject | JSONArray>}
    */
   async getMetadata() {
@@ -189,11 +199,102 @@ export class RangeDB {
 
     const { metadataOffset, metadataLength } = await this.getHeader()
     const buffer = await this.readRange(
-      metadataOffset,
-      metadataOffset + metadataLength - 1,
+      BigInt(metadataOffset),
+      BigInt(metadataOffset + metadataLength - 1),
     )
     const text = new TextDecoder().decode(buffer)
     this.metadata = JSON.parse(text)
     return this.metadata
+  }
+
+  /**
+   * Traverse chunk consisting of mulitple key/value pairs and returns value
+   * for given key or null if not founded
+   * @param {ArrayBuffer} chunk
+   * @param {bigint} key
+   * @returns {ArrayBuffer | null}
+   */
+  static findInChunk(key, chunk) {
+    const view = new DataView(chunk)
+    const length = chunk.byteLength
+    let offset = 0
+
+    // Chunk format
+    // [Key: BigUint64][Data Length: UInt32][Data bytes]
+    while (offset < length) {
+      const recordKey = view.getBigUint64(offset, true)
+      if (key < recordKey) {
+        return null
+      }
+      offset += 8
+
+      const dataLength = view.getUint32(offset, true)
+      offset += 4
+      if (recordKey === key) {
+        return chunk.slice(offset, offset + dataLength)
+      }
+      offset += dataLength
+    }
+    return null
+  }
+
+  /**
+   * Binary search in index for a given key and return value
+   * @param {bigint} key
+   * @param {BigUint64Array} index
+   * @param {bigint} dataEndOffset one behind data ends
+   * @return {Range | null} Offset of data
+   */
+  static binarySearch(key, index, dataEndOffset) {
+    let low = 0,
+      high = (index.length >> 1) - 1,
+      blockIndex = -1
+
+    while (low <= high) {
+      const midPair = (low + high) >>> 1
+      const midIdx = midPair * 2
+      const midKey = index[midIdx]
+
+      if (midKey === key) {
+        blockIndex = midIdx
+        break
+      } else if (midKey < key) {
+        blockIndex = midIdx
+        low = midPair + 1
+      } else {
+        high = midPair - 1
+      }
+    }
+
+    if (blockIndex === -1) {
+      return null
+    }
+    const start = index[blockIndex + 1]
+    const end =
+      blockIndex + 2 < index.length ? index[blockIndex + 3] : dataEndOffset
+    return {
+      start,
+      end,
+    }
+  }
+
+  /**
+   * Get raw ArrayBuffer from database for given key
+   * @param {bigint} key
+   * @returns {Promise<ArrayBuffer | null>}
+   * */
+  async getRaw(key) {
+    if (!this.index) {
+      await this.getIndex()
+    }
+    const { dataOffset, dataLength } = this.header
+    const range = RangeDB.binarySearch(key, this.index, dataOffset + dataLength)
+    if (!range) {
+      return null
+    }
+    const { start, end } = range
+    const chunkBuffer = await this.readRange(start, end)
+
+    return RangeDB.findInChunk(key, chunkBuffer)
   }
 }

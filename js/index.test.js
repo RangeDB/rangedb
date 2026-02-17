@@ -154,7 +154,10 @@ describe('RangeDB', () => {
     it('should fail on wrong index type', async () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
-      db.header = {}
+      db.header = {
+        indexOffset: 200,
+        indexLength: 100,
+      }
       const { buffer } = new Uint8Array(2)
       mockFetch(buffer)
       await rejects(async () => await db.getIndex(), {
@@ -164,8 +167,10 @@ describe('RangeDB', () => {
     it('should read index', async () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
-      db.header = {}
-
+      db.header = {
+        indexOffset: 200,
+        indexLength: 100,
+      }
       // biome-ignore format: easier to read
       const { buffer } = new Uint8Array([
         1,          // indexType
@@ -196,7 +201,10 @@ describe('RangeDB', () => {
       const db = new RangeDB(URL)
 
       // @ts-expect-error
-      db.header = {}
+      db.header = {
+        metadataOffset: 200,
+        metadataLength: 100,
+      }
       const { buffer } = new Uint8Array([
         0x7b, 0x22, 0x6b, 0x65, 0x79, 0x22, 0x3a, 0x22, 0x76, 0x61, 0x6c, 0x75,
         0x65, 0x22, 0x7d,
@@ -206,6 +214,128 @@ describe('RangeDB', () => {
 
       const metadata = await db.getMetadata()
       deepStrictEqual({ key: 'value' }, metadata)
+    })
+  })
+
+  describe('findInChunk', () => {
+    it('should find key in chunk or not', () => {
+      const { findInChunk } = RangeDB
+      // biome-ignore format: easier to read
+      const { buffer } = new Uint8Array([
+        // [key                      | length     | value]
+            10, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  1,
+            20, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  2,
+            50, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  5,
+            90, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  9,
+      ])
+      deepStrictEqual(findInChunk(0n, buffer), null)
+      deepStrictEqual(findInChunk(99n, buffer), null)
+      deepStrictEqual(findInChunk(10n, buffer), new Uint8Array([1]).buffer)
+      deepStrictEqual(findInChunk(20n, buffer), new Uint8Array([2]).buffer)
+      deepStrictEqual(findInChunk(50n, buffer), new Uint8Array([5]).buffer)
+      deepStrictEqual(findInChunk(90n, buffer), new Uint8Array([9]).buffer)
+    })
+  })
+
+  describe('binarySearch', () => {
+    it('should find key in index or not', () => {
+      const { binarySearch: b } = RangeDB
+      // biome-ignore format: easier to read
+      const a = new BigUint64Array([
+        100n, 1000n,
+        200n, 2000n,
+        300n, 3000n,
+      ])
+      deepStrictEqual(b(1n, a, 1000n), null)
+      deepStrictEqual(b(100n, a, 10000n), { start: 1000n, end: 2000n })
+      deepStrictEqual(b(150n, a, 10000n), { start: 1000n, end: 2000n })
+      deepStrictEqual(b(200n, a, 10000n), { start: 2000n, end: 3000n })
+      deepStrictEqual(b(300n, a, 10000n), { start: 3000n, end: 10000n })
+      deepStrictEqual(b(301n, a, 10000n), { start: 3000n, end: 10000n })
+    })
+  })
+
+  describe('getRaw', () => {
+    it('should return null for non-existent key', async () => {
+      const db = new RangeDB(URL)
+      // @ts-expect-error
+      db.header = {
+        dataOffset: 1000n,
+        dataLength: 100n,
+      }
+      // @ts-expect-error
+      db.index = new BigUint64Array([100n, 1000n, 200n, 1100n])
+
+      const result = await db.getRaw(50n)
+      strictEqual(result, null)
+    })
+
+    it('should return ArrayBuffer for existing key', async () => {
+      const db = new RangeDB(URL)
+      // @ts-expect-error
+      db.header = {
+        dataOffset: 1000n,
+        dataLength: 100n,
+      }
+      // @ts-expect-error
+      db.index = new BigUint64Array([100n, 1000n, 200n, 1100n])
+
+      // biome-ignore format: easier to read
+      const chunk = new Uint8Array([
+        100, 0, 0, 0, 0, 0, 0, 0,  // key 100n
+        3, 0, 0, 0,                  // length 3
+        1, 2, 3,                      // data
+      ])
+
+      mockFetch(chunk.buffer)
+
+      const result = await db.getRaw(100n)
+      deepStrictEqual(new Uint8Array(result), new Uint8Array([1, 2, 3]))
+    })
+
+    it('should load index if not cached', async () => {
+      const db = new RangeDB(URL)
+      // @ts-expect-error
+      db.header = {
+        dataOffset: 1000n,
+        dataLength: 100n,
+        indexOffset: 200,
+        indexLength: 100,
+      }
+      // biome-ignore format: easier to read
+      const index = new Uint8Array([
+        1,                          // indexType
+        1, 0, 0, 0,                 // count 1
+        0, 0, 0,                    // padding
+        100, 0, 0, 0, 0, 0, 0, 0,   // key
+        232, 3, 0, 0, 0, 0, 0, 0,   // offset
+      ])
+
+      // biome-ignore format: easier to read
+      const chunk = new Uint8Array([
+        100, 0, 0, 0, 0, 0, 0, 0, // key
+        1, 0, 0, 0,               // length
+        42,                       // data
+      ])
+
+      let callCount = 0
+      mock.method(global, 'fetch', () => {
+        callCount++
+        if (callCount === 1) {
+          return Promise.resolve({
+            headers: { get: () => 'etag' },
+            arrayBuffer: () => Promise.resolve(index.buffer),
+          })
+        } else {
+          return Promise.resolve({
+            headers: { get: () => 'etag' },
+            arrayBuffer: () => Promise.resolve(chunk.buffer),
+          })
+        }
+      })
+
+      const result = await db.getRaw(100n)
+      deepStrictEqual(new Uint8Array(result), new Uint8Array([42]))
     })
   })
 })
