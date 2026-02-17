@@ -1,10 +1,17 @@
+// ts-check
+
 import { deepStrictEqual, rejects, strictEqual } from 'node:assert'
 import { describe, it, mock } from 'node:test'
 import { RangeDB } from './index.js'
 
 const URL = 'https://rangedb.com/test.rangedb'
 
-const mockFetch = (arrayBuffer: ArrayBuffer, etag: string = 'etag') =>
+/**
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} etag
+ * @returns
+ */
+const mockFetch = (arrayBuffer, etag = 'etag') =>
   mock.method(global, 'fetch', () =>
     Promise.resolve({
       headers: {
