@@ -338,4 +338,37 @@ describe('RangeDB', () => {
       deepStrictEqual(result, new Uint8Array([42]).buffer)
     })
   })
+
+  describe('getJson', () => {
+    it('should return parsed JSON for valid data', async () => {
+      const db = new RangeDB(URL)
+      const jsonData = { key: 'value', number: 42 }
+      const jsonString = JSON.stringify(jsonData)
+      const buffer = new TextEncoder().encode(jsonString).buffer
+
+      mock.method(db, 'getRaw', () => Promise.resolve(buffer))
+
+      const result = await db.getJson(100n)
+      deepStrictEqual(result, jsonData)
+    })
+
+    it('should return null if getRaw returns null', async () => {
+      const db = new RangeDB(URL)
+
+      mock.method(db, 'getRaw', () => Promise.resolve(null))
+
+      const result = await db.getJson(100n)
+      strictEqual(result, null)
+    })
+
+    it('should throw SyntaxError for invalid JSON', async () => {
+      const db = new RangeDB(URL)
+      const invalidJson = '{ invalid json }'
+      const buffer = new TextEncoder().encode(invalidJson).buffer
+
+      mock.method(db, 'getRaw', () => Promise.resolve(buffer))
+
+      await rejects(async () => await db.getJson(100n), SyntaxError)
+    })
+  })
 })
