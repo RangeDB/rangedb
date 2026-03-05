@@ -33,9 +33,9 @@ export const ContentType = Object.freeze({
 /**
  * @typedef {Object} Header
  * @property {number} specVersion
- * @property {number} metadataOffset
+ * @property {bigint} metadataOffset
  * @property {number} metadataLength
- * @property {number} indexOffset
+ * @property {bigint} indexOffset
  * @property {number} indexLength
  * @property {bigint} dataOffset
  * @property {bigint} dataLength
@@ -138,14 +138,14 @@ export class RangeDB {
     if (specVersion !== 1) {
       throw new Error(`Unsupported spec version. Expected 1 got ${specVersion}`)
     }
-    const metadataOffset = view.getUint32(8, true)
-    const metadataLength = view.getUint32(12, true)
-    const indexOffset = view.getUint32(16, true)
-    const indexLength = view.getUint32(20, true)
-    const dataOffset = view.getBigUint64(24, true)
-    const dataLength = view.getBigUint64(32, true)
-    const compression = view.getInt8(40)
-    const contentType = view.getInt8(41)
+    const metadataOffset = view.getBigUint64(8, true)
+    const metadataLength = view.getUint32(16, true)
+    const indexOffset = view.getBigUint64(20, true)
+    const indexLength = view.getUint32(28, true)
+    const dataOffset = view.getBigUint64(32, true)
+    const dataLength = view.getBigUint64(40, true)
+    const compression = view.getInt8(48)
+    const contentType = view.getInt8(49)
 
     this.header = {
       specVersion,
@@ -173,8 +173,8 @@ export class RangeDB {
     const { indexLength, indexOffset } = await this.getHeader()
 
     const buffer = await this.readRange(
-      BigInt(indexOffset),
-      BigInt(indexLength),
+      indexOffset,
+      indexOffset + BigInt(indexLength) - 1n,
     )
     const view = new DataView(buffer)
 
@@ -199,8 +199,8 @@ export class RangeDB {
 
     const { metadataOffset, metadataLength } = await this.getHeader()
     const buffer = await this.readRange(
-      BigInt(metadataOffset),
-      BigInt(metadataOffset + metadataLength - 1),
+      metadataOffset,
+      metadataOffset + BigInt(metadataLength) - 1n,
     )
     const text = new TextDecoder().decode(buffer)
     this.metadata = JSON.parse(text)

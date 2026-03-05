@@ -115,9 +115,9 @@ describe('RangeDB', () => {
       const { buffer } = new Uint8Array([
         0x52, 0x61, 0x6e, 0x67, 0x65, 0x44, 0x42, // magic 'RangeDB'
         1, // specVersion
-        35, 0, 0, 0, // metadataOffset
+        35, 0, 0, 0, 0, 0, 0, 0, // metadataOffset (64-bit)
         100, 0, 0, 0, // metadataLength
-        135, 0, 0, 0, // indexOffset
+        135, 0, 0, 0, 0, 0, 0, 0, // indexOffset (64-bit)
         200, 0, 0, 0, // indexLength
         250, 0, 0, 0, 0, 0, 0, 0, // dataOffset
         251, 0, 0, 0, 0, 0, 0, 0, // dataLength
@@ -130,9 +130,9 @@ describe('RangeDB', () => {
       const header = await db.getHeader()
       const expectedHeader = {
         specVersion: 1,
-        metadataOffset: 35,
+        metadataOffset: 35n,
         metadataLength: 100,
-        indexOffset: 135,
+        indexOffset: 135n,
         indexLength: 200,
         dataOffset: 250n,
         dataLength: 251n,
@@ -155,7 +155,7 @@ describe('RangeDB', () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
       db.header = {
-        indexOffset: 200,
+        indexOffset: 200n,
         indexLength: 100,
       }
       const { buffer } = new Uint8Array(2)
@@ -168,7 +168,7 @@ describe('RangeDB', () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
       db.header = {
-        indexOffset: 200,
+        indexOffset: 200n,
         indexLength: 100,
       }
       // biome-ignore format: easier to read
@@ -202,7 +202,7 @@ describe('RangeDB', () => {
 
       // @ts-expect-error
       db.header = {
-        metadataOffset: 200,
+        metadataOffset: 200n,
         metadataLength: 100,
       }
       const { buffer } = new Uint8Array([
@@ -299,7 +299,7 @@ describe('RangeDB', () => {
       db.header = {
         dataOffset: 1000n,
         dataLength: 100n,
-        indexOffset: 200,
+        indexOffset: 200n,
         indexLength: 100,
       }
       // biome-ignore format: easier to read
