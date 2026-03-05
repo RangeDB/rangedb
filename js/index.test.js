@@ -290,7 +290,7 @@ describe('RangeDB', () => {
       mockFetch(chunk.buffer)
 
       const result = await db.getRaw(100n)
-      deepStrictEqual(new Uint8Array(result), new Uint8Array([1, 2, 3]))
+      deepStrictEqual(result, new Uint8Array([1, 2, 3]).buffer)
     })
 
     it('should load index if not cached', async () => {
@@ -335,7 +335,7 @@ describe('RangeDB', () => {
       })
 
       const result = await db.getRaw(100n)
-      deepStrictEqual(new Uint8Array(result), new Uint8Array([42]))
+      deepStrictEqual(result, new Uint8Array([42]).buffer)
     })
   })
 })
