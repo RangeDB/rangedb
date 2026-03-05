@@ -279,7 +279,7 @@ export class RangeDB {
   }
 
   /**
-   * Get raw ArrayBuffer from database for given key
+   * Get a raw ArrayBuffer from database for given key or null if not exists
    * @param {bigint} key
    * @returns {Promise<ArrayBuffer | null>}
    * */
@@ -296,5 +296,21 @@ export class RangeDB {
     const chunkBuffer = await this.readRange(start, end)
 
     return RangeDB.findInChunk(key, chunkBuffer)
+  }
+
+  /**
+   * Get a JSON from database for a given key or null if not exists
+   * It may throew JSON parsing error
+   * @param {bigint} key
+   * @returns {Promise<JSONValue | null>}
+   * @throws {SyntaxError}
+   */
+  async getJson(key) {
+    const buffer = await this.getRaw(key)
+    if (buffer === null) {
+      return null
+    }
+    const string = new TextDecoder().decode(buffer)
+    return JSON.parse(string)
   }
 }
