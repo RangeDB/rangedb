@@ -1,7 +1,6 @@
 {
-  "name": "@rangedb/js",
+  "name": "@rangedb/node",
   "version": "1.0.0",
-  "type": "module",
   "main": "./index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -18,5 +17,8 @@
     "prepare": "npm run build:types",
     "test": "node --test --experimental-test-coverage",
     "test:watch": "node --test --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3"
   }
 }
