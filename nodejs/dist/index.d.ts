@@ -36,13 +36,18 @@ export class RangeDbBuilder {
     private dataLength;
     /**
      * Add record into database file
+     *
      * @param {BigInt} key
      * @param {ArrayBuffer} data
+     *
      * @returns {Promise<void>}
+     * @throws Error if record key are not in increasing orders
      */
     addRecord(key: bigint, data: ArrayBuffer): Promise<void>;
     /**
      * Finalize database file by writting index
+     *
+     * @returns {Promise<void>}
      */
     close(): Promise<void>;
 }

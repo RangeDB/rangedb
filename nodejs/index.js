@@ -73,9 +73,12 @@ export class RangeDbBuilder {
 
   /**
    * Add record into database file
+   *
    * @param {BigInt} key
    * @param {ArrayBuffer} data
+   *
    * @returns {Promise<void>}
+   * @throws Error if record key are not in increasing orders
    */
   async addRecord(key, data) {
     if (this.lastKey !== null && this.lastKey > key) {
@@ -104,6 +107,8 @@ export class RangeDbBuilder {
 
   /**
    * Finalize database file by writting index
+   *
+   * @returns {Promise<void>}
    */
   async close() {
     const indexPairs = this.index.length / 2

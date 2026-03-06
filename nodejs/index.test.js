@@ -24,7 +24,6 @@ describe('RangeDbBuilder', () => {
     await builder.close()
 
     const b = await readFile(filePath)
-    console.log(b)
     assert.equal(b.toString('ascii', 0, 7), 'RangeDB') // Magic number
     assert.equal(b.readUint8(7), VERSION)
 
