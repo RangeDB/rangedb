@@ -2,7 +2,8 @@
 
 import { createWriteStream } from 'node:fs'
 import { open } from 'node:fs/promises'
-import { RangeDB } from '../js/index.js'
+import { RangeDB } from '@rangedb/js'
+
 export const VERSION = 1
 
 /**
@@ -16,7 +17,7 @@ export const VERSION = 1
  * More items in chunk smaller the index is but more is fetched for a single get query.
  */
 
-export class RangeDbBuilder {
+export class RangeDBBuilder {
   /**
    *
    * @param {string} filePath
@@ -145,7 +146,7 @@ export class RangeDBNode extends RangeDB {
   /**
    * Initialize database by providing url of rangedb file.
    * @param {string} urlOrPath
-   * @param {import('../js/index.js').Options} options
+   * @param {import('@rangedb/js').RangeDBOptions} options
    */
   constructor(urlOrPath, options = {}) {
     super(urlOrPath, options)

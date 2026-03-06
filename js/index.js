@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * @typedef {Object} Options
+ * @typedef {Object} RangeDBOptions
  * @property {number} [firstReadSize] Specify how much should be read from the file on first call.
  * If known, it can be set to size of header + index. It will save an additional request.
  */
@@ -60,7 +60,7 @@ export class RangeDB {
    * Initialize database by providing url of rangedb file.
    *
    * @param {string} url
-   * @param {Options} options
+   * @param {RangeDBOptions} options
    */
   constructor(url, options = {}) {
     /** @protected @type {string}  */

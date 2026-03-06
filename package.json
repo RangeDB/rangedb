@@ -1,0 +1,8 @@
+{
+  "name": "rangedb",
+  "private": true,
+  "workspaces": [
+    "js",
+    "nodejs"
+  ]
+}

@@ -1,11 +1,13 @@
+// ts-check
+
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { RangeDBNode, RangeDbBuilder, VERSION } from './index.js'
+import { RangeDBBuilder, RangeDBNode, VERSION } from './index.js'
 
-describe('RangeDbBuilder', () => {
+describe('RangeDBBuilder', () => {
   let tmpDir
 
   beforeEach(async () => {
@@ -20,7 +22,7 @@ describe('RangeDbBuilder', () => {
 
   it.only('should create empty database with default options', async () => {
     const filePath = join(tmpDir, 'empty.rangedb')
-    const builder = new RangeDbBuilder(filePath)
+    const builder = new RangeDBBuilder(filePath)
     await builder.close()
 
     const b = await readFile(filePath)
@@ -47,7 +49,7 @@ describe('RangeDbBuilder', () => {
   it('should create database with custom metadata', async () => {
     const filePath = join(tmpDir, 'metadata.rangedb')
     const metadata = { foo: 'bar' }
-    const builder = new RangeDbBuilder(filePath, { metadata })
+    const builder = new RangeDBBuilder(filePath, { metadata })
     await builder.close()
 
     const b = await readFile(filePath)
@@ -64,7 +66,7 @@ describe('RangeDbBuilder', () => {
 
   it('should add records and update index/data offsets correctly', async () => {
     const filePath = join(tmpDir, 'data.rangedb')
-    const builder = new RangeDbBuilder(filePath)
+    const builder = new RangeDBBuilder(filePath)
 
     const record1 = Buffer.from('record1')
     const record2 = Buffer.from('record2')
@@ -112,7 +114,7 @@ describe('RangeDbBuilder', () => {
 
   it('should chunk index correctly', async () => {
     const filePath = join(tmpDir, 'chunk.db')
-    const builder = new RangeDbBuilder(filePath, { chunkSize: 2 })
+    const builder = new RangeDBBuilder(filePath, { chunkSize: 2 })
     await builder.addRecord(10n, Buffer.from('record1'))
     await builder.addRecord(20n, Buffer.from('record2'))
     await builder.addRecord(30n, Buffer.from('record3'))
@@ -132,7 +134,7 @@ describe('RangeDbBuilder', () => {
 
   it('should throw if records added in non-increasing order', async () => {
     const filePath = join(tmpDir, 'error.rangedb')
-    const builder = new RangeDbBuilder(filePath)
+    const builder = new RangeDBBuilder(filePath)
 
     await builder.addRecord(20n, Buffer.from('record2'))
     await assert.rejects(() => builder.addRecord(10n, Buffer.from('record1')), {
@@ -142,7 +144,7 @@ describe('RangeDbBuilder', () => {
 
   it('should create readble database', async () => {
     const filePath = join(tmpDir, 'error.rangedb')
-    const builder = new RangeDbBuilder(filePath)
+    const builder = new RangeDBBuilder(filePath)
     new Array(100)
       .fill()
       .map((_, i) => builder.addRecord(BigInt(i), Buffer.from(`Record ${i}`)))

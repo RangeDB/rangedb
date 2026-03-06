@@ -1,6 +1,6 @@
 export const VERSION: 1;
 /**
- * @typedef {Object} Options
+ * @typedef {Object} BuilderOptions
  *
  * @property {Object} [metadata]
  * Arbitrary metadata for database as a JSON.
@@ -9,13 +9,13 @@ export const VERSION: 1;
  * Number of records in one chunk. How many records can share one entry in index.
  * More items in chunk smaller the index is but more is fetched for a single get query.
  */
-export class RangeDbBuilder {
+export class RangeDBBuilder {
     /**
      *
      * @param {string} filePath
-     * @param {Options} options
+     * @param {BuilderOptions} options
      */
-    constructor(filePath: string, options?: Options);
+    constructor(filePath: string, options?: BuilderOptions);
     /** @private @type {string} */
     private filePath;
     /** @private @type {import('node:fs').WriteStream | null}  */
@@ -51,7 +51,11 @@ export class RangeDbBuilder {
      */
     close(): Promise<void>;
 }
-export type Options = {
+export class RangeDBNode extends RangeDB {
+    handle: import("node:fs/promises").FileHandle;
+    [Symbol.asyncDispose](): Promise<void>;
+}
+export type BuilderOptions = {
     /**
      * Arbitrary metadata for database as a JSON.
      */
@@ -62,3 +66,4 @@ export type Options = {
      */
     chunkSize?: number;
 };
+import { RangeDB } from '@rangedb/js';
