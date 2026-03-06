@@ -58,11 +58,12 @@ export const ContentType = Object.freeze({
 export class RangeDB {
   /**
    * Initialize database by providing url of rangedb file.
+   *
    * @param {string} url
    * @param {Options} options
    */
   constructor(url, options = {}) {
-    /** @private @type {string}  */
+    /** @protected @type {string}  */
     this.url = url
 
     /** @private @type {string| null}  */
@@ -83,6 +84,7 @@ export class RangeDB {
 
   /**
    * Invalidate header.
+   *
    * @returns {void}
    */
   invalidate() {
@@ -92,6 +94,8 @@ export class RangeDB {
 
   /**
    * Perform HTTP range request.
+   *
+   * @protected
    * @param {bigint} start
    * @param {bigint} end
    * @returns {Promise<ArrayBuffer>}
@@ -113,14 +117,15 @@ export class RangeDB {
   }
 
   /**
-   * Get header from database or return cached
+   * Get header from database or return cached.
+   *
    * @returns {Promise<Header>}
    */
   async getHeader() {
     if (this.header) {
       return this.header
     }
-    const buffer = await this.readRange(0n, BigInt(this.firstReadSize))
+    const buffer = await this.readRange(0n, BigInt(this.firstReadSize) - 1n)
     const view = new DataView(buffer)
 
     const magicNumber =
@@ -163,6 +168,8 @@ export class RangeDB {
 
   /**
    * Load index from database or return cached
+   *
+   * @private
    * @returns {Promise<number>}
    */
   async getIndex() {
@@ -190,6 +197,7 @@ export class RangeDB {
 
   /**
    * Get metadata from database or return cached
+   *
    * @return {Promise<JSONObject | JSONArray>}
    */
   async getMetadata() {
@@ -210,8 +218,10 @@ export class RangeDB {
   /**
    * Traverse chunk consisting of mulitple key/value pairs and returns value
    * for given key or null if not founded
+   * @private
    * @param {ArrayBuffer} chunk
    * @param {bigint} key
+   *
    * @returns {ArrayBuffer | null}
    */
   static findInChunk(key, chunk) {
@@ -243,6 +253,7 @@ export class RangeDB {
    * @param {bigint} key
    * @param {BigUint64Array} index
    * @param {bigint} dataEndOffset one behind data ends
+   *
    * @return {Range | null} Offset of data
    */
   static binarySearch(key, index, dataEndOffset) {
@@ -280,7 +291,9 @@ export class RangeDB {
 
   /**
    * Get a raw ArrayBuffer from database for given key or null if not exists
+   *
    * @param {bigint} key
+   *
    * @returns {Promise<ArrayBuffer | null>}
    * */
   async getRaw(key) {
@@ -293,7 +306,7 @@ export class RangeDB {
       return null
     }
     const { start, end } = range
-    const chunkBuffer = await this.readRange(start, end)
+    const chunkBuffer = await this.readRange(start, end - 1n)
 
     return RangeDB.findInChunk(key, chunkBuffer)
   }
@@ -301,7 +314,9 @@ export class RangeDB {
   /**
    * Get a JSON from database for a given key or null if not exists
    * It may throw JSON parsing error
+   *
    * @param {bigint} key
+   *
    * @returns {Promise<JSONValue | null>}
    * @throws {SyntaxError}
    */

@@ -2,11 +2,11 @@
 
 import { createWriteStream } from 'node:fs'
 import { open } from 'node:fs/promises'
-
+import { RangeDB } from '../js/index.js'
 export const VERSION = 1
 
 /**
- * @typedef {Object} Options
+ * @typedef {Object} BuilderOptions
  *
  * @property {Object} [metadata]
  * Arbitrary metadata for database as a JSON.
@@ -20,7 +20,7 @@ export class RangeDbBuilder {
   /**
    *
    * @param {string} filePath
-   * @param {Options} options
+   * @param {BuilderOptions} options
    */
   constructor(filePath, options = {}) {
     /** @private @type {string} */
@@ -88,18 +88,19 @@ export class RangeDbBuilder {
     }
     this.lastKey = key
 
-    if (this.records % this.chunkSize === 0) {
-      this.index.push(key, this.dataLength)
-    }
-    this.records++
-
     const recordLength = 8n + 4n + BigInt(data.byteLength)
     const record = Buffer.alloc(12)
     record.writeBigUint64LE(key, 0)
     record.writeUint32LE(data.byteLength, 8)
     const fine = this.writter.write(record) && this.writter.write(data)
+
+    if (this.records % this.chunkSize === 0) {
+      this.index.push(key, this.offset)
+    }
     this.offset += recordLength
     this.dataLength += recordLength
+    this.records++
+
     if (!fine) {
       await new Promise((resolve) => this.writter.once('drain', resolve))
     }
@@ -137,5 +138,47 @@ export class RangeDbBuilder {
     headerUpdateBuffer.writeBigUInt64LE(this.dataLength, 20) // dataLength
     await file.write(headerUpdateBuffer, 0, headerUpdateBuffer.length, 20)
     await file.close()
+  }
+}
+
+export class RangeDBNode extends RangeDB {
+  /**
+   * Initialize database by providing url of rangedb file.
+   * @param {string} urlOrPath
+   * @param {import('../js/index.js').Options} options
+   */
+  constructor(urlOrPath, options = {}) {
+    super(urlOrPath, options)
+  }
+
+  /**
+   * Perform range read on file.
+   *
+   * @protected
+   * @param {bigint} start
+   * @param {bigint} end
+   *
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async readRange(start, end) {
+    const url = this.url
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return super.readRange(start, end)
+    }
+    if (!this.handle) {
+      this.handle = await open(url, 'r')
+    }
+
+    const length = Number(end - start) + 1
+
+    const buffer = Buffer.alloc(length)
+    await this.handle.read(buffer, 0, length, start)
+    return buffer.buffer.slice()
+  }
+
+  async [Symbol.asyncDispose]() {
+    if (this.handle) {
+      await this.handle.close()
+    }
   }
 }

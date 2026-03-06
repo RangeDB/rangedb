@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { RangeDbBuilder, VERSION } from './index.js'
+import { RangeDBNode, RangeDbBuilder, VERSION } from './index.js'
 
 describe('RangeDbBuilder', () => {
   let tmpDir
@@ -105,9 +105,9 @@ describe('RangeDbBuilder', () => {
     const indexRecordOffset2 = indexBuffer.readBigUInt64LE(indexDataOffset + 24)
 
     assert.equal(indexKey1, 10n)
-    assert.equal(indexRecordOffset1, 0n) // offset relative to dataOffset
+    assert.equal(indexRecordOffset1, 64n)
     assert.equal(indexKey2, 20n)
-    assert.equal(indexRecordOffset2, record1TotalLength)
+    assert.equal(indexRecordOffset2, 83n)
   })
 
   it('should chunk index correctly', async () => {
@@ -131,12 +131,27 @@ describe('RangeDbBuilder', () => {
   })
 
   it('should throw if records added in non-increasing order', async () => {
-    const filePath = join(tmpDir, 'error.db')
+    const filePath = join(tmpDir, 'error.rangedb')
     const builder = new RangeDbBuilder(filePath)
 
     await builder.addRecord(20n, Buffer.from('record2'))
     await assert.rejects(() => builder.addRecord(10n, Buffer.from('record1')), {
       message: /Records must be added in increasing order/,
     })
+  })
+
+  it('should create readble database', async () => {
+    const filePath = join(tmpDir, 'error.rangedb')
+    const builder = new RangeDbBuilder(filePath)
+    new Array(100)
+      .fill()
+      .map((_, i) => builder.addRecord(BigInt(i), Buffer.from(`Record ${i}`)))
+    await builder.close()
+
+    const db = new RangeDBNode(filePath)
+    const record = await db.getRaw(30n)
+
+    assert.equal(Buffer.from(record).toString('utf8'), 'Record 30')
+    assert.equal(await db.getRaw(1000n), null)
   })
 })

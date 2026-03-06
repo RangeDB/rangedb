@@ -115,9 +115,9 @@ describe('RangeDB', () => {
       const { buffer } = new Uint8Array([
         0x52, 0x61, 0x6e, 0x67, 0x65, 0x44, 0x42, // magic 'RangeDB'
         1, // specVersion
-        35, 0, 0, 0, 0, 0, 0, 0, // metadataOffset (64-bit)
+        35, 0, 0, 0, 0, 0, 0, 0, // metadataOffset
         100, 0, 0, 0, // metadataLength
-        135, 0, 0, 0, 0, 0, 0, 0, // indexOffset (64-bit)
+        135, 0, 0, 0, 0, 0, 0, 0, // indexOffset
         200, 0, 0, 0, // indexLength
         250, 0, 0, 0, 0, 0, 0, 0, // dataOffset
         251, 0, 0, 0, 0, 0, 0, 0, // dataLength
