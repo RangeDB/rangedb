@@ -35,7 +35,7 @@ export class RangeDbBuilder {
     /** @private @type {BigInt} */
     this.lastKey = null
 
-    /** @pricate @type {BigInt[]} */
+    /** @private @type {BigInt[]} */
     this.index = []
 
     /** @private @type {number} */
@@ -53,18 +53,16 @@ export class RangeDbBuilder {
     const metadata = Buffer.from(JSON.stringify(options.metadata ?? null))
 
     const header = Buffer.alloc(60)
-    header.writeUint32LE(0x52616e67, 0) // Rang
-    header.writeUint16LE(0x6544, 4) // eD
-    header.writeUint8(0x42, 6) // eD
+    header.write('RangeDB', 0, 7, 'ascii') // Magic number
     header.writeUint8(VERSION, 7)
-    header.writeUint32LE(header.length, 8) // metadata offset
-    header.writeUint32LE(metadata.length, 12) // metadata length
-    header.writeUint32LE(0, 16) // index offset
-    header.writeUint32LE(0, 20) // index length
-    header.writeBigUInt64LE(0n, 24) // data offset
-    header.writeBigUInt64LE(0n, 32) // data length
-    header.writeUInt8(0, 40) // compression
-    header.writeUInt8(0, 40) // contentType
+    header.writeBigUInt64LE(BigInt(header.length), 8) // metadata offset
+    header.writeUint32LE(metadata.length, 16) // metadata length
+    header.writeBigUInt64LE(0n, 20) // index offset
+    header.writeUInt32LE(0, 28) // index length
+    header.writeBigUInt64LE(0n, 32) // data offset
+    header.writeBigUInt64LE(0n, 40) // data length
+    header.writeUInt8(0, 48) // compression
+    header.writeUInt8(0, 49) // contentType
 
     this.writter.write(header)
     this.offset += BigInt(header.length)
@@ -90,6 +88,7 @@ export class RangeDbBuilder {
     if (this.records % this.chunkSize === 0) {
       this.index.push(key, this.dataLength)
     }
+    this.records++
 
     const recordLength = 8n + 4n + BigInt(data.byteLength)
     const record = Buffer.alloc(12)
@@ -107,23 +106,31 @@ export class RangeDbBuilder {
    * Finalize database file by writting index
    */
   async close() {
-    const indexSize = this.index.length
-    const indexLength = 1 + 4 + indexSize * 2 * 8
-    const indexBuffer = Buffer.alloc(1 + 4)
-    indexBuffer.writeUInt8(1, 0) // Index type, always 1
-    indexBuffer.writeInt32LE(indexSize, 1)
-    this.writter.write(indexBuffer)
-    this.writter.write(new BigUint64Array(this.index))
-    this.writter.close()
+    const indexPairs = this.index.length / 2
+    const indexDataByteLength = this.index.length * 8
+    // 1(type) + 4(count) + 3(padding)+data
+    const indexLength = 1 + 4 + 3 + indexDataByteLength
 
-    const buffer = Buffer.alloc(2 * 4 + 2 * 8)
-    // buffer.writeInt32LE(this.offset, 0)// TODO
-    buffer.writeInt32LE(indexLength, 4)
-    buffer.writeBigUInt64LE(this.dataOffset, 8)
-    buffer.writeBigUInt64LE(this.dataLength, 16)
+    const indexBuffer = Buffer.alloc(1 + 4 + 3) // type + count + padding
+    indexBuffer.writeUInt8(1, 0) // Index type, always 1
+    indexBuffer.writeUInt32LE(indexPairs, 1)
+    this.writter.write(indexBuffer)
+
+    const indexDataBuffer = Buffer.alloc(indexDataByteLength)
+    for (let i = 0; i < this.index.length; i++) {
+      indexDataBuffer.writeBigUInt64LE(this.index[i], i * 8)
+    }
+    this.writter.write(indexDataBuffer)
+
+    await new Promise((resolve) => this.writter.close(resolve))
 
     const file = await open(this.filePath, 'r+')
-    file.write(buffer, 16, buffer.length, 0)
-    file.close()
+    const headerUpdateBuffer = Buffer.alloc(28)
+    headerUpdateBuffer.writeBigUInt64LE(this.offset, 0) // indexOffset
+    headerUpdateBuffer.writeUInt32LE(indexLength, 8) // indexLength
+    headerUpdateBuffer.writeBigUInt64LE(this.dataOffset, 12) // dataOffset
+    headerUpdateBuffer.writeBigUInt64LE(this.dataLength, 20) // dataLength
+    await file.write(headerUpdateBuffer, 0, headerUpdateBuffer.length, 20)
+    await file.close()
   }
 }

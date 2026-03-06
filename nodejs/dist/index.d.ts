@@ -24,8 +24,8 @@ export class RangeDbBuilder {
     private chunkSize;
     /** @private @type {BigInt} */
     private lastKey;
-    /** @pricate @type {BigInt[]} */
-    index: bigint[];
+    /** @private @type {BigInt[]} */
+    private index;
     /** @private @type {number} */
     private records;
     /** @private @type {BigInt} */
@@ -35,9 +35,10 @@ export class RangeDbBuilder {
     /** @private @type {BigInt} */
     private dataLength;
     /**
-     *
+     * Add record into database file
      * @param {BigInt} key
      * @param {ArrayBuffer} data
+     * @returns {Promise<void>}
      */
     addRecord(key: bigint, data: ArrayBuffer): Promise<void>;
     /**

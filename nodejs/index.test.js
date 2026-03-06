@@ -1,0 +1,143 @@
+import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, it } from 'node:test'
+import { RangeDbBuilder, VERSION } from './index.js'
+
+describe('RangeDbBuilder', () => {
+  let tmpDir
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'rangedb-test'))
+  })
+
+  afterEach(async () => {
+    if (tmpDir) {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it.only('should create empty database with default options', async () => {
+    const filePath = join(tmpDir, 'empty.rangedb')
+    const builder = new RangeDbBuilder(filePath)
+    await builder.close()
+
+    const b = await readFile(filePath)
+    console.log(b)
+    assert.equal(b.toString('ascii', 0, 7), 'RangeDB') // Magic number
+    assert.equal(b.readUint8(7), VERSION)
+
+    const metadataOffset = b.readBigUInt64LE(8)
+    const metadataLength = b.readUint32LE(16)
+    const indexOffset = b.readBigUInt64LE(20)
+    const indexLength = b.readUInt32LE(28)
+
+    assert.equal(metadataOffset, 60n)
+    assert.equal(metadataLength, 4) // "null" stringified
+    assert.equal(indexOffset, 64n) // 60 header + 4 metadata
+    assert.equal(indexLength, 8) // 1(type)+4(length)+3(padding)
+
+    const metadataBuffer = b.subarray(
+      Number(metadataOffset),
+      Number(metadataOffset) + metadataLength,
+    )
+    assert.equal(metadataBuffer.toString('utf8'), 'null')
+  })
+
+  it('should create database with custom metadata', async () => {
+    const filePath = join(tmpDir, 'metadata.rangedb')
+    const metadata = { foo: 'bar' }
+    const builder = new RangeDbBuilder(filePath, { metadata })
+    await builder.close()
+
+    const b = await readFile(filePath)
+
+    const metadataOffset = b.readBigUInt64LE(8)
+    const metadataLength = b.readUint32LE(16)
+
+    const metadataBuffer = b.subarray(
+      Number(metadataOffset),
+      Number(metadataOffset) + metadataLength,
+    )
+    assert.equal(metadataBuffer.toString('utf8'), JSON.stringify(metadata))
+  })
+
+  it('should add records and update index/data offsets correctly', async () => {
+    const filePath = join(tmpDir, 'data.rangedb')
+    const builder = new RangeDbBuilder(filePath)
+
+    const record1 = Buffer.from('record1')
+    const record2 = Buffer.from('record2')
+
+    await builder.addRecord(10n, record1)
+    await builder.addRecord(20n, record2)
+    await builder.close()
+
+    const fileBuffer = await readFile(filePath)
+
+    const indexOffset = fileBuffer.readBigUInt64LE(20)
+    const indexLength = fileBuffer.readUint32LE(28)
+    const dataOffset = fileBuffer.readBigUInt64LE(32)
+    const dataLength = fileBuffer.readBigUInt64LE(40)
+
+    assert.equal(dataOffset, 64n) // 60 (header) + 4 (metadata "null")
+
+    // Each record is: 8 (key) + 4 (length) + data.byteLength
+    const record1TotalLength = 8n + 4n + BigInt(record1.byteLength) // 19n
+    const record2TotalLength = 8n + 4n + BigInt(record2.byteLength) // 19n
+    assert.equal(dataLength, record1TotalLength + record2TotalLength) // 38n
+
+    assert.equal(indexOffset, dataOffset + dataLength)
+
+    const indexBuffer = fileBuffer.subarray(
+      Number(indexOffset),
+      Number(indexOffset) + indexLength,
+    )
+    assert.equal(indexBuffer.readUint8(0), 1) // index type
+    const indexPairs = indexBuffer.readUint32LE(1)
+
+    assert.equal(indexPairs, 2)
+
+    const indexDataOffset = 8 // 1(type) + 4(count) + 3(padding)
+    const indexKey1 = indexBuffer.readBigUInt64LE(indexDataOffset)
+    const indexRecordOffset1 = indexBuffer.readBigUInt64LE(indexDataOffset + 8)
+    const indexKey2 = indexBuffer.readBigUInt64LE(indexDataOffset + 16)
+    const indexRecordOffset2 = indexBuffer.readBigUInt64LE(indexDataOffset + 24)
+
+    assert.equal(indexKey1, 10n)
+    assert.equal(indexRecordOffset1, 0n) // offset relative to dataOffset
+    assert.equal(indexKey2, 20n)
+    assert.equal(indexRecordOffset2, record1TotalLength)
+  })
+
+  it('should chunk index correctly', async () => {
+    const filePath = join(tmpDir, 'chunk.db')
+    const builder = new RangeDbBuilder(filePath, { chunkSize: 2 })
+    await builder.addRecord(10n, Buffer.from('record1'))
+    await builder.addRecord(20n, Buffer.from('record2'))
+    await builder.addRecord(30n, Buffer.from('record3'))
+    await builder.close()
+
+    const fileBuffer = await readFile(filePath)
+    const indexOffset = fileBuffer.readBigUInt64LE(20)
+    const indexLength = fileBuffer.readUint32LE(28)
+    const indexBuffer = fileBuffer.subarray(
+      Number(indexOffset),
+      Number(indexOffset) + indexLength,
+    )
+
+    const indexPairs = indexBuffer.readUint32LE(1)
+    assert.equal(indexPairs, 2)
+  })
+
+  it('should throw if records added in non-increasing order', async () => {
+    const filePath = join(tmpDir, 'error.db')
+    const builder = new RangeDbBuilder(filePath)
+
+    await builder.addRecord(20n, Buffer.from('record2'))
+    await assert.rejects(() => builder.addRecord(10n, Buffer.from('record1')), {
+      message: /Records must be added in increasing order/,
+    })
+  })
+})
