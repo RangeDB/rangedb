@@ -22,22 +22,22 @@ export class RangeDBBuilder {
     private writter;
     /** @private @type {number}  */
     private chunkSize;
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     private lastKey;
-    /** @private @type {BigInt[]} */
+    /** @private @type {bigint[]} */
     private index;
     /** @private @type {number} */
     private records;
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     private offset;
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     private dataOffset;
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     private dataLength;
     /**
      * Add record into database file
      *
-     * @param {BigInt} key
+     * @param {bigint} key
      * @param {ArrayBuffer} data
      *
      * @returns {Promise<void>}

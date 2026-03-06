@@ -33,22 +33,22 @@ export class RangeDBBuilder {
     /** @private @type {number}  */
     this.chunkSize = options.chunkSize ?? 1
 
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     this.lastKey = null
 
-    /** @private @type {BigInt[]} */
+    /** @private @type {bigint[]} */
     this.index = []
 
     /** @private @type {number} */
     this.records = 0
 
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     this.offset = 0n
 
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     this.dataOffset = 0n
 
-    /** @private @type {BigInt} */
+    /** @private @type {bigint} */
     this.dataLength = 0n
 
     const metadata = Buffer.from(JSON.stringify(options.metadata ?? null))
@@ -75,7 +75,7 @@ export class RangeDBBuilder {
   /**
    * Add record into database file
    *
-   * @param {BigInt} key
+   * @param {bigint} key
    * @param {ArrayBuffer} data
    *
    * @returns {Promise<void>}
