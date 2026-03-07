@@ -183,7 +183,7 @@ export class RangeDBNode extends RangeDB {
    */
   async close() {
     if (this.handle) {
-     this.handle.close()
+      await this.handle.close()
       this.handle = null
     }
   }

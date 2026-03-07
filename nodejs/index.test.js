@@ -167,6 +167,7 @@ describe('RangeDB', () => {
 
       assert.equal(Buffer.from(record).toString('utf8'), 'Record 30')
       assert.equal(await db.getRaw(1000n), null)
+      await db.close()
     })
 
     it('should hit watermark', async () => {
