@@ -16,7 +16,7 @@
   "scripts": {
     "build:types": "npx -p typescript tsc",
     "prepare": "npm run build:types",
-    "test": "node --test --experimental-test-coverage",
+    "test": "node --experimental-test-coverage --test-coverage-include=*.js --test",
     "test:watch": "node --test --watch "
   },
   "dependencies": {

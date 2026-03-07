@@ -177,9 +177,18 @@ export class RangeDBNode extends RangeDB {
     return buffer.buffer.slice()
   }
 
-  async [Symbol.asyncDispose]() {
+  /** Close database file.
+   *
+   * @returns {Promise<void>}
+   */
+  async close() {
     if (this.handle) {
-      await this.handle.close()
+     this.handle.close()
+      this.handle = null
     }
+  }
+
+  async [Symbol.asyncDispose]() {
+    await this.close()
   }
 }
