@@ -66,7 +66,7 @@ export class RangeDB {
     /** @protected @type {string}  */
     this.url = url
 
-    /** @private @type {string| null}  */
+    /** @protected @type {string| null}  */
     this.etag = null
 
     /** @private @type {Header | null} */
@@ -83,7 +83,7 @@ export class RangeDB {
   }
 
   /**
-   * Invalidate header.
+   * Invalidate header and index.
    *
    * @returns {void}
    */
@@ -101,19 +101,20 @@ export class RangeDB {
    * @returns {Promise<ArrayBuffer>}
    */
   async readRange(start, end) {
-    const response = await fetch(this.url, {
+    const {headers, arrayBuffer} = await fetch(this.url, {
       headers: {
         range: `bytes=${start}-${end}`,
       },
     })
 
-    const etag = response.headers.get('etag')
+    const etag = headers.get('etag')
     if (this.etag && this.etag !== etag) {
       this.invalidate()
+      throw new Error('Database file has changed based on ETag.')
     }
     this.etag = etag
 
-    return response.arrayBuffer()
+    return arrayBuffer()
   }
 
   /**

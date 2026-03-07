@@ -53,6 +53,11 @@ export class RangeDBBuilder {
 }
 export class RangeDBNode extends RangeDB {
     handle: import("node:fs/promises").FileHandle;
+    /** Close database file.
+     *
+     * @returns {Promise<void>}
+     */
+    close(): Promise<void>;
     [Symbol.asyncDispose](): Promise<void>;
 }
 export type BuilderOptions = {

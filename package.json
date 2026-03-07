@@ -2,6 +2,7 @@
   "name": "rangedb",
   "private": true,
   "workspaces": [
+    "cloudflare",
     "js",
     "nodejs"
   ]

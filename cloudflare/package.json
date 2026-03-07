@@ -1,5 +1,5 @@
 {
-  "name": "@rangedb/nodejs",
+  "name": "@rangedb/cloudflare",
   "version": "1.0.0",
   "type": "module",
   "main": "./index.js",
@@ -9,9 +9,6 @@
       "types": "./dist/index.d.ts",
       "import": "./index.js"
     }
-  },
-  "engines": {
-    "node": "^22.0.0 || >=23.6.0"
   },
   "scripts": {
     "build:types": "npx -p typescript tsc",
@@ -23,6 +20,7 @@
     "@rangedb/js": "*"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260307.1",
     "@types/node": "^25.3.3"
   }
 }

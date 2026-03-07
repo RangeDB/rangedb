@@ -1,0 +1,16 @@
+{
+  "include": ["index.js"],
+  "exclude": [],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist",
+    "lib": ["ESNext"],
+    "types": ["@cloudflare/workers-types"]
+  }
+}

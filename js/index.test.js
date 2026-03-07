@@ -1,7 +1,7 @@
-// ts-check
+// @ts-check
 
 import { deepStrictEqual, rejects, strictEqual } from 'node:assert'
-import { describe, it, mock } from 'node:test'
+import { assert, describe, it, mock } from 'node:test'
 import { RangeDB } from './index.js'
 
 const URL = 'https://rangedb.com/test.rangedb'
@@ -62,12 +62,13 @@ describe('RangeDB', () => {
       const etag = 'etag'
       mockFetch(expectedBuffer, etag)
 
+      // @ts-expect-error
       const result = await db.readRange(0, 9)
       strictEqual(result, expectedBuffer)
       // @ts-expect-error
       strictEqual(db.etag, etag)
     })
-    it('should invalidate header and index if ETag changed', async () => {
+    it('should throw error and invalidate header and index if ETag changed', async () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
       db.etag = 'old-etag'
@@ -75,7 +76,15 @@ describe('RangeDB', () => {
       db.header = { some: 'data' }
       mockFetch(new ArrayBuffer(1), 'new-etag')
 
-      await db.readRange(0, 0)
+      await rejects(
+        () => {
+          // @ts-expect-error
+          return db.readRange(0n, 10n)
+        },
+        {
+          message: /Database file has changed based on ETag./,
+        },
+      )
       // @ts-expect-error
       strictEqual(db.header, null)
       // @ts-expect-error
@@ -148,6 +157,7 @@ describe('RangeDB', () => {
       const db = new RangeDB(URL)
       // @ts-expect-error
       db.index = new BigUint64Array([1n, 2n, 3n, 4n])
+      // @ts-expect-error
       const count = await db.getIndex()
       strictEqual(count, 2)
     })
@@ -160,9 +170,15 @@ describe('RangeDB', () => {
       }
       const { buffer } = new Uint8Array(2)
       mockFetch(buffer)
-      await rejects(async () => await db.getIndex(), {
-        message: 'Unsuported index type: Expected 1 got 0',
-      })
+      await rejects(
+        async () => {
+          // @ts-expect-error
+          await db.getIndex()
+        },
+        {
+          message: 'Unsuported index type: Expected 1 got 0',
+        },
+      )
     })
     it('should read index', async () => {
       const db = new RangeDB(URL)
@@ -175,13 +191,14 @@ describe('RangeDB', () => {
       const { buffer } = new Uint8Array([
         1,          // indexType
         2, 0, 0, 0, // count
-        0,0,0,      // TODO: remove padding
+        0, 0, 0,      // TODO: remove padding
         // key                    | offset
-        100, 0, 0, 0, 0, 0, 0, 0,  50, 0, 0, 0, 0, 0, 0, 0,
-        200, 0, 0, 0, 0, 0, 0, 0,  250, 0, 0, 0, 0, 0, 0, 0,
+        100, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 0,
+        200, 0, 0, 0, 0, 0, 0, 0, 250, 0, 0, 0, 0, 0, 0, 0,
       ])
 
       mockFetch(buffer)
+      // @ts-expect-error
       const count = await db.getIndex()
       // @ts-expect-error
       deepStrictEqual(db.index, new BigUint64Array([100n, 50n, 200n, 250n]))
@@ -219,14 +236,15 @@ describe('RangeDB', () => {
 
   describe('findInChunk', () => {
     it('should find key in chunk or not', () => {
+      // @ts-expect-error
       const { findInChunk } = RangeDB
       // biome-ignore format: easier to read
       const { buffer } = new Uint8Array([
         // [key                      | length     | value]
-            10, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  1,
-            20, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  2,
-            50, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  5,
-            90, 0, 0, 0, 0, 0, 0, 0,  1, 0, 0, 0,  9,
+        10, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+        20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2,
+        50, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 5,
+        90, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 9,
       ])
       deepStrictEqual(findInChunk(0n, buffer), null)
       deepStrictEqual(findInChunk(99n, buffer), null)
