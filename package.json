@@ -2,8 +2,8 @@
   "name": "rangedb",
   "private": true,
   "workspaces": [
-    "cloudflare",
-    "js",
-    "nodejs"
+    "packages/cloudflare",
+    "packages/js",
+    "packages/nodejs"
   ]
 }
