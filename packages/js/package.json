@@ -10,13 +10,21 @@
       "import": "./index.js"
     }
   },
-  "engines": {
-    "node": "^22.0.0 || >=23.6.0"
-  },
   "scripts": {
     "build:types": "npx -p typescript tsc",
     "prepare": "npm run build:types",
     "test": "node --test --experimental-test-coverage",
     "test:watch": "node --test --watch"
+  },
+  "engines": {
+    "node": "^22.0.0 || >=23.6.0"
+  },
+  "files": [
+    "index.js",
+    "dist/index.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

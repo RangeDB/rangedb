@@ -19,6 +19,10 @@
     "test": "node --experimental-test-coverage --test-coverage-include=*.js --test",
     "test:watch": "node --test --watch"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "dependencies": {
     "@rangedb/js": "*"
   },
