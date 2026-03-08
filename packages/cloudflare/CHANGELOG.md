@@ -1,5 +1,13 @@
 # @rangedb/cloudflare
 
+## 1.0.2
+
+### Patch Changes
+
+- e613fd2: CI 2
+- Updated dependencies [e613fd2]
+  - @rangedb/js@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes
