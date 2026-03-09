@@ -1,5 +1,15 @@
 # @rangedb/cloudflare
 
+## 1.0.3
+
+### Patch Changes
+
+- 1d421b4: Fixing CI with NPM
+- a66ed31: Test all on pull-request
+- Updated dependencies [1d421b4]
+- Updated dependencies [a66ed31]
+  - @rangedb/js@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes
