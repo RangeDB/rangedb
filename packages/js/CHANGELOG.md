@@ -1,5 +1,12 @@
 # @rangedb/js
 
+## 1.0.3
+
+### Patch Changes
+
+- 1d421b4: Fixing CI with NPM
+- a66ed31: Test all on pull-request
+
 ## 1.0.2
 
 ### Patch Changes
