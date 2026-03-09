@@ -14,7 +14,7 @@
     "node": "^22.0.0 || >=23.6.0"
   },
   "scripts": {
-    "build:types": "npx -p typescript tsc",
+    "build:types": "tsc",
     "prepare": "npm run build:types",
     "test": "node --experimental-test-coverage --test-coverage-include=*.js --test",
     "test:watch": "node --test --watch"

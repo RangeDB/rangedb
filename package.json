@@ -5,5 +5,13 @@
     "packages/cloudflare",
     "packages/js",
     "packages/nodejs"
-  ]
+  ],
+  "scripts": {
+    "changeset": "changeset",
+    "test": "npm test --workspaces"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0",
+    "typescript": "^5.9.3"
+  }
 }
