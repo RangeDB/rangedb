@@ -2,6 +2,9 @@
   "name": "@rangedb/js",
   "version": "1.0.2",
   "type": "module",
+  "repository": {
+    "url": "https://github.com/RangeDB/rangedb"
+  },
   "main": "./index.js",
   "types": "./dist/index.d.ts",
   "exports": {
