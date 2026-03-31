@@ -1,3 +1,4 @@
 js/dist/index.d.ts
 node_modules
 package-lock.json
+*.rangedb

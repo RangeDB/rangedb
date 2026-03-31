@@ -101,7 +101,7 @@ export class RangeDB {
    * @returns {Promise<ArrayBuffer>}
    */
   async readRange(start, end) {
-    const {headers, arrayBuffer} = await fetch(this.url, {
+    const { headers, arrayBuffer } = await fetch(this.url, {
       headers: {
         range: `bytes=${start}-${end}`,
       },

@@ -28,7 +28,7 @@ export class RangeDBBuilder {
     this.filePath = filePath
 
     /** @private @type {import('node:fs').WriteStream | null}  */
-    this.writter = createWriteStream(filePath)
+    this.writter = createWriteStream(filePath, { highWaterMark: 1000 })
 
     /** @private @type {number}  */
     this.chunkSize = options.chunkSize ?? 1
@@ -65,13 +65,20 @@ export class RangeDBBuilder {
     header.writeUInt8(0, 48) // compression
     header.writeUInt8(0, 49) // contentType
 
-    this.writter.write(header)
+    this.write(header)
     this.offset += BigInt(header.length)
-    this.writter.write(metadata)
+    this.write(metadata)
     this.offset += BigInt(metadata.length)
     this.dataOffset = this.offset
   }
 
+
+  async write(chunk) {
+    const fine = this.writter.write(chunk)
+    if (!fine) {
+      await new Promise((resolve) => this.writter.once('drain', resolve))
+    }
+  }
   /**
    * Add record into database file
    *
@@ -93,7 +100,9 @@ export class RangeDBBuilder {
     const record = Buffer.alloc(12)
     record.writeBigUint64LE(key, 0)
     record.writeUint32LE(data.byteLength, 8)
-    const fine = this.writter.write(record) && this.writter.write(data)
+
+    await this.write(record)
+    await this.write(data)
 
     if (this.records % this.chunkSize === 0) {
       this.index.push(key, this.offset)
@@ -101,10 +110,6 @@ export class RangeDBBuilder {
     this.offset += recordLength
     this.dataLength += recordLength
     this.records++
-
-    if (!fine) {
-      await new Promise((resolve) => this.writter.once('drain', resolve))
-    }
   }
 
   /**
@@ -121,13 +126,13 @@ export class RangeDBBuilder {
     const indexBuffer = Buffer.alloc(1 + 4 + 3) // type + count + padding
     indexBuffer.writeUInt8(1, 0) // Index type, always 1
     indexBuffer.writeUInt32LE(indexPairs, 1)
-    this.writter.write(indexBuffer)
+    await this.write(indexBuffer)
 
     const indexDataBuffer = Buffer.alloc(indexDataByteLength)
     for (let i = 0; i < this.index.length; i++) {
       indexDataBuffer.writeBigUInt64LE(this.index[i], i * 8)
     }
-    this.writter.write(indexDataBuffer)
+    await this.write(indexDataBuffer)
 
     await new Promise((resolve) => this.writter.close(resolve))
 
