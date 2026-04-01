@@ -101,13 +101,19 @@ export class RangeDBBuilder {
   /**
    * Add record into database file
    *
-   * @param {bigint} key
-   * @param {Buffer} data
+   * @param {bigint | number} key
+   * @param {Buffer | string} data
    *
    * @returns {Promise<void>}
    * @throws Error if record key are not in increasing orders
    */
   async addRecord(key, data) {
+    if (typeof key === 'number') {
+      if (key > Number.MAX_SAFE_INTEGER) {
+        throw new Error(`Key is bigger than MAX_SAFE_INTEGER. Use BigInt instead.`)
+      }
+      key = BigInt(key)
+    }
     if (this.lastKey !== null && this.lastKey > key) {
       throw new Error(
         `Records must be added in increasing order. Current key ${key} is not bigger than previous key ${this.lastKey}`,
@@ -115,13 +121,22 @@ export class RangeDBBuilder {
     }
     this.lastKey = key
 
-    const recordLength = 8n + 4n + BigInt(data.byteLength)
+    let buffer
+    if (Buffer.isBuffer(data)) {
+      buffer = data
+    } else if (typeof data === 'object' && data !== null) {
+      buffer = Buffer.from(JSON.stringify(data))
+    } else if (typeof data === 'string') {
+      buffer = Buffer.from(data)
+    }
+
+    const recordLength = 8n + 4n + BigInt(buffer.byteLength)
     const record = Buffer.alloc(12)
     record.writeBigUint64LE(key, 0)
-    record.writeUint32LE(data.byteLength, 8)
+    record.writeUint32LE(buffer.byteLength, 8)
 
     await this.write(record)
-    await this.write(data)
+    await this.write(buffer)
 
     if (this.records % this.chunkSize === 0) {
       this.index.push(key, this.offset)

@@ -121,23 +121,31 @@ export class RangeDB {
      */
     getMetadata(): Promise<JSONObject | JSONArray>;
     /**
-     * Get a raw ArrayBuffer from database for given key or null if not exists
+     * Get a raw ArrayBuffer from database for given key or null if not exists.
      *
-     * @param {bigint} key
+     * @param {bigint | number} key
      *
      * @returns {Promise<ArrayBuffer | null>}
-     * */
-    getRaw(key: bigint): Promise<ArrayBuffer | null>;
+     */
+    getRaw(key: bigint | number): Promise<ArrayBuffer | null>;
+    /**
+     * Get a string from database for a given key or null if not exists
+     *
+     * @param {bigint | number} key
+     *
+     * @returns {Promise<string | null>}
+     */
+    getString(key: bigint | number): Promise<string | null>;
     /**
      * Get a JSON from database for a given key or null if not exists
      * It may throw JSON parsing error
      *
-     * @param {bigint} key
+     * @param {bigint | number} key
      *
      * @returns {Promise<JSONValue | null>}
      * @throws {SyntaxError}
      */
-    getJson(key: bigint): Promise<JSONValue | null>;
+    getJson(key: bigint | number): Promise<JSONValue | null>;
 }
 export type RangeDBOptions = {
     /**

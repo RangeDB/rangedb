@@ -13,15 +13,12 @@ const json = JSON.parse(file)
 const builder = new RangeDBBuilder('cities.rangedb', { chunkSize: 1 })
 
 for (const [i, c] of json.entries()) {
-    const s = JSON.stringify(c)
-    const buffer = Buffer.from(s)
-    await builder.addRecord(BigInt(i), buffer)
+    await builder.addRecord(i, c)
 }
 
 await builder.close()
 
 // Reading
 const db = new RangeDBNode('cities.rangedb')
-const decoder = new TextDecoder()
-const bratislava = await db.getRaw(127057n)
-console.log(decoder.decode(bratislava))
+const bratislava = await db.getJson(127057)
+console.log(bratislava)

@@ -29,7 +29,7 @@ yarn add @rangedb/js
 import { RangeDB } from '@rangedb/js'
 
 const db = RangeDB('https://rangedb.github.io/rangedb/cities.rangedb')
-const { name, country } = await db.getJson(1000)
+const { name, country } = await db.getJson(127057)
 
 console.log(name, country) // Bratislava SK
 ```
@@ -51,14 +51,14 @@ yarn add @rangedb/nodejs
 import { RangeDB } from '@rangedb/nodejs'
 
 const db = RangeDB('./cities.rangedb')
-const { name, country } = await db.getJson(2000)
+const { name, country } = await db.getJson(102344)
 
 console.log(name, country) // Bergen NO
 ```
 
 ### Cloudflare
 
-For usage in Cloudflare worker. Cloudflare pricing model is perfect for RangeDB as reads are free. One only pays for transfered data.
+For usage in Cloudflare worker. Cloudflare pricing model is perfect for RangeDB as reads are free. Only transfered data are charged.
 
 #### Install
 
@@ -73,7 +73,7 @@ yarn add @rangedb/cloudflare
 import { RangeDB } from '@rangedb/js'
 
 const db = RangeDB(env.MY_BUCKET, 'cities.rangedb')
-const { name, country } = await db.getJson(3000)
+const { name, country } = await db.getJson(28550)
 
-console.log(name, country) // Praha CZ
+console.log(name, country) // Prague CZ
 ```

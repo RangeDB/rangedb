@@ -18,8 +18,8 @@ export class RangeDBBuilder {
     constructor(filePath: string, options?: BuilderOptions);
     /** @private @type {string} */
     private filePath;
-    /** @private @type {import('node:fs').WriteStream | null}  */
-    private writter;
+    /** @private @type {import('node:fs/promises').FileHandle | null}  */
+    private fileHandle;
     /** @private @type {number}  */
     private chunkSize;
     /** @private @type {bigint} */
@@ -34,16 +34,33 @@ export class RangeDBBuilder {
     private dataOffset;
     /** @private @type {bigint} */
     private dataLength;
+    /** @private @type {any} */
+    private metadata;
+    /**
+     * Initialize database file. Called automatically when adding a record.
+     *
+     * @returns {Promise<void>}
+     */
+    init(): Promise<void>;
+    /**
+     * Handle appending to file
+     *
+     * @private
+     *
+     * @param {Buffer} chunk
+     * @return {Promise<void>}
+     */
+    private write;
     /**
      * Add record into database file
      *
-     * @param {bigint} key
-     * @param {ArrayBuffer} data
+     * @param {bigint | number} key
+     * @param {Buffer | string} data
      *
      * @returns {Promise<void>}
      * @throws Error if record key are not in increasing orders
      */
-    addRecord(key: bigint, data: ArrayBuffer): Promise<void>;
+    addRecord(key: bigint | number, data: Buffer | string): Promise<void>;
     /**
      * Finalize database file by writting index
      *
