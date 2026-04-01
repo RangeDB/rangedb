@@ -1,5 +1,18 @@
 # @rangedb/cloudflare
 
+## 1.1.0
+
+### Minor Changes
+
+- cb777b0: feat: simplify adding string and json objects
+
+### Patch Changes
+
+- Updated dependencies [11988d1]
+- Updated dependencies [5636210]
+- Updated dependencies [cb777b0]
+  - @rangedb/js@1.1.0
+
 ## 1.0.3
 
 ### Patch Changes

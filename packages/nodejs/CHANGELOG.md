@@ -1,5 +1,20 @@
 # @rangedb/nodejs
 
+## 1.1.0
+
+### Minor Changes
+
+- 5636210: Replace writeStream with FileHandle
+- cb777b0: feat: simplify adding string and json objects
+
+### Patch Changes
+
+- 11988d1: Write need to wait for drain
+- Updated dependencies [11988d1]
+- Updated dependencies [5636210]
+- Updated dependencies [cb777b0]
+  - @rangedb/js@1.1.0
+
 ## 1.0.3
 
 ### Patch Changes
