@@ -15,7 +15,6 @@ const builder = new RangeDBBuilder('cities.rangedb', { chunkSize: 1 })
 for (const [i, c] of json.entries()) {
     const s = JSON.stringify(c)
     const buffer = Buffer.from(s)
-    if (c.name === 'Bratislava') console.log(i)
     await builder.addRecord(BigInt(i), buffer)
 }
 

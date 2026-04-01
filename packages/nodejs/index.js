@@ -1,6 +1,5 @@
 // @ts-check
 
-import { createWriteStream } from 'node:fs'
 import { open } from 'node:fs/promises'
 import { RangeDB } from '@rangedb/js'
 
@@ -27,8 +26,8 @@ export class RangeDBBuilder {
     /** @private @type {string} */
     this.filePath = filePath
 
-    /** @private @type {import('node:fs').WriteStream | null}  */
-    this.writter = createWriteStream(filePath, { highWaterMark: 1000 })
+    /** @private @type {import('node:fs/promises').FileHandle | null}  */
+    this.fileHandle
 
     /** @private @type {number}  */
     this.chunkSize = options.chunkSize ?? 1
@@ -51,7 +50,19 @@ export class RangeDBBuilder {
     /** @private @type {bigint} */
     this.dataLength = 0n
 
-    const metadata = Buffer.from(JSON.stringify(options.metadata ?? null))
+    /** @private @type {any} */
+    this.metadata = options.metadata
+  }
+
+  /**
+   * Initialize database file. Called automatically when adding a record.
+   *
+   * @returns {Promise<void>}
+   */
+  async init() {
+    this.fileHandle = await open(this.filePath, 'w')
+
+    const metadata = Buffer.from(JSON.stringify(this.metadata ?? null))
 
     const header = Buffer.alloc(60)
     header.write('RangeDB', 0, 7, 'ascii') // Magic number
@@ -65,25 +76,33 @@ export class RangeDBBuilder {
     header.writeUInt8(0, 48) // compression
     header.writeUInt8(0, 49) // contentType
 
-    this.write(header)
+    await this.write(header)
     this.offset += BigInt(header.length)
-    this.write(metadata)
+    await this.write(metadata)
     this.offset += BigInt(metadata.length)
     this.dataOffset = this.offset
   }
 
-
+  /**
+   * Handle appending to file
+   * 
+   * @private
+   * 
+   * @param {Buffer} chunk 
+   * @return {Promise<void>}
+   */
   async write(chunk) {
-    const fine = this.writter.write(chunk)
-    if (!fine) {
-      await new Promise((resolve) => this.writter.once('drain', resolve))
+    if (!this.fileHandle) {
+      await this.init()
     }
+    await this.fileHandle.write(chunk)
   }
+
   /**
    * Add record into database file
    *
    * @param {bigint} key
-   * @param {ArrayBuffer} data
+   * @param {Buffer} data
    *
    * @returns {Promise<void>}
    * @throws Error if record key are not in increasing orders
@@ -133,8 +152,7 @@ export class RangeDBBuilder {
       indexDataBuffer.writeBigUInt64LE(this.index[i], i * 8)
     }
     await this.write(indexDataBuffer)
-
-    await new Promise((resolve) => this.writter.close(resolve))
+    await this.fileHandle.close()
 
     const file = await open(this.filePath, 'r+')
     const headerUpdateBuffer = Buffer.alloc(28)

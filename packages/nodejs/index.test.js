@@ -153,13 +153,12 @@ describe('RangeDB', () => {
     it('should create readable database', async () => {
       const filePath = join(tmpDir, 'readable.rangedb')
       const builder = new RangeDBBuilder(filePath)
-      await Promise.all(
-        new Array(100)
-          .fill(null)
-          .map((_, i) =>
-            builder.addRecord(BigInt(i), Buffer.from(`Record ${i}`)),
-          ),
-      )
+      const items = new Array(100)
+        .fill(null)
+        .map((_, i) => i)
+      for (const i of items) {
+        await builder.addRecord(BigInt(i), Buffer.from(`Record ${i}`))
+      }
       await builder.close()
 
       const db = new RangeDBNode(filePath)
@@ -183,6 +182,7 @@ describe('RangeDB', () => {
     it('should open url', async () => {
       const filePath = join(tmpDir, 'empty.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const { buffer } = await readFile(filePath)
@@ -211,6 +211,7 @@ describe('RangeDB', () => {
     it('should close file', async () => {
       const filePath = join(tmpDir, 'close.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const db = new RangeDBNode(filePath)
@@ -223,6 +224,7 @@ describe('RangeDB', () => {
     it('should dispose handle', async () => {
       const filePath = join(tmpDir, 'dispose.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const db = new RangeDBNode(filePath)
