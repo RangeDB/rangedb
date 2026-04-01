@@ -1,7 +1,10 @@
 {
   "name": "@rangedb/cloudflare",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "type": "module",
+  "repository": {
+    "url": "https://github.com/RangeDB/rangedb"
+  },
   "main": "./index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,7 +14,7 @@
     }
   },
   "scripts": {
-    "build:types": "npx -p typescript tsc",
+    "build:types": "tsc",
     "prepare": "npm run build:types",
     "test": "node --experimental-test-coverage --test-coverage-include=*.js --test",
     "test:watch": "node --test --watch"
