@@ -1,6 +1,6 @@
 // @ts-check
 
-import { equal, rejects } from 'node:assert'
+import { equal, rejects } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { RangeDBCloudflare } from './index.js'
 
@@ -43,7 +43,7 @@ describe('RangeDBCloudflare', () => {
 
     // @ts-expect-error protected
     await rejects(() => db.readRange(0n, 10n), {
-      message: /Database file not found. Key missing.rangedb not found in bucket./,
+      message: 'Database file not found. Key missing.rangedb not found in bucket.',
     })
   })
 
@@ -61,7 +61,7 @@ describe('RangeDBCloudflare', () => {
 
     // @ts-expect-error protected
     await rejects(() => db.readRange(100n, 119n), {
-      message: /Database file has changed based on ETag./,
+      message: 'Database file has changed based on ETag.',
     })
   })
 })

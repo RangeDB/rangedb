@@ -1,6 +1,5 @@
 // @ts-check
 
-import { createWriteStream } from 'node:fs'
 import { open } from 'node:fs/promises'
 import { RangeDB } from '@rangedb/js'
 
@@ -27,8 +26,8 @@ export class RangeDBBuilder {
     /** @private @type {string} */
     this.filePath = filePath
 
-    /** @private @type {import('node:fs').WriteStream | null}  */
-    this.writter = createWriteStream(filePath)
+    /** @private @type {import('node:fs/promises').FileHandle | null}  */
+    this.fileHandle
 
     /** @private @type {number}  */
     this.chunkSize = options.chunkSize ?? 1
@@ -51,7 +50,19 @@ export class RangeDBBuilder {
     /** @private @type {bigint} */
     this.dataLength = 0n
 
-    const metadata = Buffer.from(JSON.stringify(options.metadata ?? null))
+    /** @private @type {any} */
+    this.metadata = options.metadata
+  }
+
+  /**
+   * Initialize database file. Called automatically when adding a record.
+   *
+   * @returns {Promise<void>}
+   */
+  async init() {
+    this.fileHandle = await open(this.filePath, 'w')
+
+    const metadata = Buffer.from(JSON.stringify(this.metadata ?? null))
 
     const header = Buffer.alloc(60)
     header.write('RangeDB', 0, 7, 'ascii') // Magic number
@@ -65,23 +76,44 @@ export class RangeDBBuilder {
     header.writeUInt8(0, 48) // compression
     header.writeUInt8(0, 49) // contentType
 
-    this.writter.write(header)
+    await this.write(header)
     this.offset += BigInt(header.length)
-    this.writter.write(metadata)
+    await this.write(metadata)
     this.offset += BigInt(metadata.length)
     this.dataOffset = this.offset
   }
 
   /**
+   * Handle appending to file
+   * 
+   * @private
+   * 
+   * @param {Buffer} chunk 
+   * @return {Promise<void>}
+   */
+  async write(chunk) {
+    if (!this.fileHandle) {
+      await this.init()
+    }
+    await this.fileHandle.write(chunk)
+  }
+
+  /**
    * Add record into database file
    *
-   * @param {bigint} key
-   * @param {ArrayBuffer} data
+   * @param {bigint | number} key
+   * @param {Buffer | string} data
    *
    * @returns {Promise<void>}
    * @throws Error if record key are not in increasing orders
    */
   async addRecord(key, data) {
+    if (typeof key === 'number') {
+      if (key > Number.MAX_SAFE_INTEGER) {
+        throw new Error(`Key is bigger than MAX_SAFE_INTEGER. Use BigInt instead.`)
+      }
+      key = BigInt(key)
+    }
     if (this.lastKey !== null && this.lastKey > key) {
       throw new Error(
         `Records must be added in increasing order. Current key ${key} is not bigger than previous key ${this.lastKey}`,
@@ -89,11 +121,22 @@ export class RangeDBBuilder {
     }
     this.lastKey = key
 
-    const recordLength = 8n + 4n + BigInt(data.byteLength)
+    let buffer
+    if (Buffer.isBuffer(data)) {
+      buffer = data
+    } else if (typeof data === 'object' && data !== null) {
+      buffer = Buffer.from(JSON.stringify(data))
+    } else if (typeof data === 'string') {
+      buffer = Buffer.from(data)
+    }
+
+    const recordLength = 8n + 4n + BigInt(buffer.byteLength)
     const record = Buffer.alloc(12)
     record.writeBigUint64LE(key, 0)
-    record.writeUint32LE(data.byteLength, 8)
-    const fine = this.writter.write(record) && this.writter.write(data)
+    record.writeUint32LE(buffer.byteLength, 8)
+
+    await this.write(record)
+    await this.write(buffer)
 
     if (this.records % this.chunkSize === 0) {
       this.index.push(key, this.offset)
@@ -101,10 +144,6 @@ export class RangeDBBuilder {
     this.offset += recordLength
     this.dataLength += recordLength
     this.records++
-
-    if (!fine) {
-      await new Promise((resolve) => this.writter.once('drain', resolve))
-    }
   }
 
   /**
@@ -121,15 +160,14 @@ export class RangeDBBuilder {
     const indexBuffer = Buffer.alloc(1 + 4 + 3) // type + count + padding
     indexBuffer.writeUInt8(1, 0) // Index type, always 1
     indexBuffer.writeUInt32LE(indexPairs, 1)
-    this.writter.write(indexBuffer)
+    await this.write(indexBuffer)
 
     const indexDataBuffer = Buffer.alloc(indexDataByteLength)
     for (let i = 0; i < this.index.length; i++) {
       indexDataBuffer.writeBigUInt64LE(this.index[i], i * 8)
     }
-    this.writter.write(indexDataBuffer)
-
-    await new Promise((resolve) => this.writter.close(resolve))
+    await this.write(indexDataBuffer)
+    await this.fileHandle.close()
 
     const file = await open(this.filePath, 'r+')
     const headerUpdateBuffer = Buffer.alloc(28)

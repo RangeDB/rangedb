@@ -1,6 +1,6 @@
 // @ts-check
 
-import { deepStrictEqual, rejects, strictEqual } from 'node:assert'
+import { deepStrictEqual, rejects, strictEqual } from 'node:assert/strict'
 import { assert, describe, it, mock } from 'node:test'
 import { RangeDB } from './index.js'
 
@@ -82,7 +82,7 @@ describe('RangeDB', () => {
           return db.readRange(0n, 10n)
         },
         {
-          message: /Database file has changed based on ETag./,
+          message: 'Database file has changed based on ETag.',
         },
       )
       // @ts-expect-error
@@ -355,6 +355,29 @@ describe('RangeDB', () => {
       const result = await db.getRaw(100n)
       deepStrictEqual(result, new Uint8Array([42]).buffer)
     })
+
+    it('should accept number', async () => {
+      const db = new RangeDB(URL)
+      // @ts-expect-error
+      db.header = {
+        dataOffset: 1000n,
+        dataLength: 100n,
+      }
+      // @ts-expect-error
+      db.index = new BigUint64Array([100n, 1000n, 200n, 1100n])
+
+      // biome-ignore format: easier to read
+      const chunk = new Uint8Array([
+        100, 0, 0, 0, 0, 0, 0, 0,  // key 100n
+        3, 0, 0, 0,                // length 3
+        1, 2, 3,                   // data
+      ])
+
+      mockFetch(chunk.buffer)
+
+      const result = await db.getRaw(100)
+      deepStrictEqual(result, new Uint8Array([1, 2, 3]).buffer)
+    })
   })
 
   describe('getJson', () => {
@@ -366,7 +389,7 @@ describe('RangeDB', () => {
 
       mock.method(db, 'getRaw', () => Promise.resolve(buffer))
 
-      const result = await db.getJson(100n)
+      const result = await db.getJson(100)
       deepStrictEqual(result, jsonData)
     })
 
@@ -375,7 +398,7 @@ describe('RangeDB', () => {
 
       mock.method(db, 'getRaw', () => Promise.resolve(null))
 
-      const result = await db.getJson(100n)
+      const result = await db.getJson(100)
       strictEqual(result, null)
     })
 
@@ -386,7 +409,20 @@ describe('RangeDB', () => {
 
       mock.method(db, 'getRaw', () => Promise.resolve(buffer))
 
-      await rejects(async () => await db.getJson(100n), SyntaxError)
+      await rejects(async () => await db.getJson(100), SyntaxError)
+    })
+  })
+
+  describe('getString()', () => {
+    it('should return string', async () => {
+      const db = new RangeDB(URL)
+      const str = 'long string'
+      const buffer = new TextEncoder().encode(str).buffer
+
+      mock.method(db, 'getRaw', () => Promise.resolve(buffer))
+
+      const result = await db.getString(100)
+      deepStrictEqual(result, str)
     })
   })
 })

@@ -1,6 +1,6 @@
 // ts-check
 
-import assert from 'node:assert/strict'
+import { equal, ok, rejects } from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -27,24 +27,24 @@ describe('RangeDB', () => {
       await builder.close()
 
       const b = await readFile(filePath)
-      assert.equal(b.toString('ascii', 0, 7), 'RangeDB') // Magic number
-      assert.equal(b.readUint8(7), VERSION)
+      equal(b.toString('ascii', 0, 7), 'RangeDB') // Magic number
+      equal(b.readUint8(7), VERSION)
 
       const metadataOffset = b.readBigUInt64LE(8)
       const metadataLength = b.readUint32LE(16)
       const indexOffset = b.readBigUInt64LE(20)
       const indexLength = b.readUInt32LE(28)
 
-      assert.equal(metadataOffset, 60n)
-      assert.equal(metadataLength, 4) // "null" stringified
-      assert.equal(indexOffset, 64n) // 60 header + 4 metadata
-      assert.equal(indexLength, 8) // 1(type)+4(length)+3(padding)
+      equal(metadataOffset, 60n)
+      equal(metadataLength, 4) // "null" stringified
+      equal(indexOffset, 64n) // 60 header + 4 metadata
+      equal(indexLength, 8) // 1(type)+4(length)+3(padding)
 
       const metadataBuffer = b.subarray(
         Number(metadataOffset),
         Number(metadataOffset) + metadataLength,
       )
-      assert.equal(metadataBuffer.toString('utf8'), 'null')
+      equal(metadataBuffer.toString('utf8'), 'null')
     })
 
     it('should create database with custom metadata', async () => {
@@ -62,7 +62,7 @@ describe('RangeDB', () => {
         Number(metadataOffset),
         Number(metadataOffset) + metadataLength,
       )
-      assert.equal(metadataBuffer.toString('utf8'), JSON.stringify(metadata))
+      equal(metadataBuffer.toString('utf8'), JSON.stringify(metadata))
     })
 
     it('should add records and update index/data offsets correctly', async () => {
@@ -72,8 +72,8 @@ describe('RangeDB', () => {
       const record1 = Buffer.from('record1')
       const record2 = Buffer.from('record2')
 
-      await builder.addRecord(10n, record1)
-      await builder.addRecord(20n, record2)
+      await builder.addRecord(10, record1)
+      await builder.addRecord(20, record2)
       await builder.close()
 
       const fileBuffer = await readFile(filePath)
@@ -83,23 +83,23 @@ describe('RangeDB', () => {
       const dataOffset = fileBuffer.readBigUInt64LE(32)
       const dataLength = fileBuffer.readBigUInt64LE(40)
 
-      assert.equal(dataOffset, 64n) // 60 (header) + 4 (metadata "null")
+      equal(dataOffset, 64n) // 60 (header) + 4 (metadata "null")
 
       // Each record is: 8 (key) + 4 (length) + data.byteLength
       const record1TotalLength = 8n + 4n + BigInt(record1.byteLength) // 19n
       const record2TotalLength = 8n + 4n + BigInt(record2.byteLength) // 19n
-      assert.equal(dataLength, record1TotalLength + record2TotalLength) // 38n
+      equal(dataLength, record1TotalLength + record2TotalLength) // 38n
 
-      assert.equal(indexOffset, dataOffset + dataLength)
+      equal(indexOffset, dataOffset + dataLength)
 
       const indexBuffer = fileBuffer.subarray(
         Number(indexOffset),
         Number(indexOffset) + indexLength,
       )
-      assert.equal(indexBuffer.readUint8(0), 1) // index type
+      equal(indexBuffer.readUint8(0), 1) // index type
       const indexPairs = indexBuffer.readUint32LE(1)
 
-      assert.equal(indexPairs, 2)
+      equal(indexPairs, 2)
 
       const indexDataOffset = 8 // 1(type) + 4(count) + 3(padding)
       const indexKey1 = indexBuffer.readBigUInt64LE(indexDataOffset)
@@ -111,18 +111,18 @@ describe('RangeDB', () => {
         indexDataOffset + 24,
       )
 
-      assert.equal(indexKey1, 10n)
-      assert.equal(indexRecordOffset1, 64n)
-      assert.equal(indexKey2, 20n)
-      assert.equal(indexRecordOffset2, 83n)
+      equal(indexKey1, 10n)
+      equal(indexRecordOffset1, 64n)
+      equal(indexKey2, 20n)
+      equal(indexRecordOffset2, 83n)
     })
 
     it('should chunk index correctly', async () => {
       const filePath = join(tmpDir, 'chunk.db')
       const builder = new RangeDBBuilder(filePath, { chunkSize: 2 })
-      await builder.addRecord(10n, Buffer.from('record1'))
-      await builder.addRecord(20n, Buffer.from('record2'))
-      await builder.addRecord(30n, Buffer.from('record3'))
+      await builder.addRecord(10, 'record1')
+      await builder.addRecord(20, 'record2')
+      await builder.addRecord(30, 'record3')
       await builder.close()
 
       const fileBuffer = await readFile(filePath)
@@ -134,39 +134,33 @@ describe('RangeDB', () => {
       )
 
       const indexPairs = indexBuffer.readUint32LE(1)
-      assert.equal(indexPairs, 2)
+      equal(indexPairs, 2)
     })
 
     it('should throw if records added in non-increasing order', async () => {
       const filePath = join(tmpDir, 'error.rangedb')
       const builder = new RangeDBBuilder(filePath)
 
-      await builder.addRecord(20n, Buffer.from('record2'))
-      await assert.rejects(
-        () => builder.addRecord(10n, Buffer.from('record1')),
-        {
-          message: /Records must be added in increasing order/,
-        },
-      )
+      await builder.addRecord(20, 'record2')
+      await rejects(() => builder.addRecord(10, 'record1'), {
+        message: 'Records must be added in increasing order. Current key 10 is not bigger than previous key 20',
+      })
     })
 
     it('should create readable database', async () => {
       const filePath = join(tmpDir, 'readable.rangedb')
       const builder = new RangeDBBuilder(filePath)
-      await Promise.all(
-        new Array(100)
-          .fill(null)
-          .map((_, i) =>
-            builder.addRecord(BigInt(i), Buffer.from(`Record ${i}`)),
-          ),
-      )
+      const items = new Array(100).fill(null).map((_, i) => i)
+      for (const i of items) {
+        await builder.addRecord(i, Buffer.from(`Record ${i}`))
+      }
       await builder.close()
 
       const db = new RangeDBNode(filePath)
-      const record = await db.getRaw(30n)
+      const record = await db.getRaw(30)
 
-      assert.equal(Buffer.from(record).toString('utf8'), 'Record 30')
-      assert.equal(await db.getRaw(1000n), null)
+      equal(Buffer.from(record).toString('utf8'), 'Record 30')
+      equal(await db.getRaw(1000), null)
       await db.close()
     })
 
@@ -174,8 +168,30 @@ describe('RangeDB', () => {
       const filePath = join(tmpDir, 'watermark.rangedb')
       const builder = new RangeDBBuilder(filePath)
       const buffer = Buffer.alloc(70_000)
-      await builder.addRecord(1n, buffer)
+      await builder.addRecord(1, buffer)
       await builder.close()
+    })
+
+    it('should add string', async () => {
+      const filePath = join(tmpDir, 'string.rangedb')
+      const builder = new RangeDBBuilder(filePath)
+      await builder.addRecord(1, 'String entry')
+      await builder.close()
+    })
+
+    it('should add object', async () => {
+      const filePath = join(tmpDir, 'object.rangedb')
+      const builder = new RangeDBBuilder(filePath)
+      await builder.addRecord(1, { str: 'String entry', a: 15 })
+      await builder.close()
+    })
+
+    it('should fail when adding not safe number', async () => {
+      const filePath = join(tmpDir, 'object.rangedb')
+      const builder = new RangeDBBuilder(filePath)
+      await rejects(() => builder.addRecord(Number.MAX_SAFE_INTEGER + 1, 'too big'), {
+        message: 'Key is bigger than MAX_SAFE_INTEGER. Use BigInt instead.',
+      })
     })
   })
 
@@ -183,6 +199,7 @@ describe('RangeDB', () => {
     it('should open url', async () => {
       const filePath = join(tmpDir, 'empty.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const { buffer } = await readFile(filePath)
@@ -198,40 +215,42 @@ describe('RangeDB', () => {
       })
 
       const db = new RangeDBNode('http://localhost/empty.rangedb')
-      assert.equal(await db.getRaw(1n), null)
+      equal(await db.getRaw(1n), null)
     })
 
     it('should throw error if file does not exist', async () => {
       const db = new RangeDBNode('nonexistent.rangedb')
-      assert.rejects(() => db.getRaw(1n), {
-        message: /ENOENT: no such file or directory/,
+      await rejects(() => db.getRaw(1n), {
+        message: 'ENOENT: no such file or directory, open \'nonexistent.rangedb\'',
       })
     })
 
     it('should close file', async () => {
       const filePath = join(tmpDir, 'close.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const db = new RangeDBNode(filePath)
       await db.getRaw(1n)
-      assert.ok(db.handle, 'Handle should be opened')
+      ok(db.handle, 'Handle should be opened')
       await db.close()
-      assert.equal(db.handle, null, 'Handle should be closed')
+      equal(db.handle, null, 'Handle should be closed')
     })
 
     it('should dispose handle', async () => {
       const filePath = join(tmpDir, 'dispose.rangedb')
       const builder = new RangeDBBuilder(filePath)
+      await builder.init()
       await builder.close()
 
       const db = new RangeDBNode(filePath)
       {
         await using dbUsed = db
         await dbUsed.getRaw(1n)
-        assert.ok(dbUsed.handle, 'Handle should be opened')
+        ok(dbUsed.handle, 'Handle should be opened')
       }
-      assert.equal(db.handle, null, 'Handle should be closed')
+      equal(db.handle, null, 'Handle should be closed')
     })
   })
 })

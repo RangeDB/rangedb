@@ -101,7 +101,7 @@ export class RangeDB {
    * @returns {Promise<ArrayBuffer>}
    */
   async readRange(start, end) {
-    const {headers, arrayBuffer} = await fetch(this.url, {
+    const { headers, arrayBuffer } = await fetch(this.url, {
       headers: {
         range: `bytes=${start}-${end}`,
       },
@@ -291,13 +291,16 @@ export class RangeDB {
   }
 
   /**
-   * Get a raw ArrayBuffer from database for given key or null if not exists
+   * Get a raw ArrayBuffer from database for given key or null if not exists.
    *
-   * @param {bigint} key
+   * @param {bigint | number} key
    *
    * @returns {Promise<ArrayBuffer | null>}
-   * */
+   */
   async getRaw(key) {
+    if (typeof key === 'number') {
+      key = BigInt(key)
+    }
     if (!this.index) {
       await this.getIndex()
     }
@@ -313,20 +316,34 @@ export class RangeDB {
   }
 
   /**
+   * Get a string from database for a given key or null if not exists
+   *
+   * @param {bigint | number} key
+   *
+   * @returns {Promise<string | null>}
+   */
+  async getString(key) {
+    const buffer = await this.getRaw(key)
+    if (buffer === null) {
+      return null
+    }
+    return new TextDecoder().decode(buffer)
+  }
+
+  /**
    * Get a JSON from database for a given key or null if not exists
    * It may throw JSON parsing error
    *
-   * @param {bigint} key
+   * @param {bigint | number} key
    *
    * @returns {Promise<JSONValue | null>}
    * @throws {SyntaxError}
    */
   async getJson(key) {
-    const buffer = await this.getRaw(key)
-    if (buffer === null) {
+    const str = await this.getString(key)
+    if (str === null) {
       return null
     }
-    const string = new TextDecoder().decode(buffer)
-    return JSON.parse(string)
+    return JSON.parse(str)
   }
 }
