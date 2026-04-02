@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "type": "module",
   "repository": {
-    "url": "https://github.com/RangeDB/rangedb"
+    "url": "git+https://github.com/RangeDB/rangedb.git"
   },
   "main": "./index.js",
   "types": "./dist/index.d.ts",
