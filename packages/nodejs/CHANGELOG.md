@@ -1,5 +1,15 @@
 # @rangedb/nodejs
 
+## 1.2.0
+
+### Minor Changes
+
+- be60d03: feat: cli package
+
+### Patch Changes
+
+- 39ea2b2: chore: rename var
+
 ## 1.1.0
 
 ### Minor Changes
