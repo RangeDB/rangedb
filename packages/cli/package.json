@@ -1,0 +1,31 @@
+{
+  "name": "@rangedb/cli",
+  "version": "1.1.0",
+  "type": "module",
+  "repository": {
+    "url": "https://github.com/RangeDB/rangedb"
+  },
+  "main": "./index.js",
+  "bin": {
+    "rangedb": "./index.js"
+  },
+  "engines": {
+    "node": "^22.0.0 || >=23.6.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --experimental-test-coverage --test-coverage-include=*.js --test",
+    "test:watch": "node --test --watch"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@rangedb/nodejs": "*",
+    "cac": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3"
+  }
+}
