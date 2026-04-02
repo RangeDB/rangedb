@@ -102,12 +102,12 @@ export class RangeDBBuilder {
    * Add record into database file
    *
    * @param {bigint | number} key
-   * @param {Buffer | string} data
+   * @param {Buffer | string | object} value data to store
    *
    * @returns {Promise<void>}
    * @throws Error if record key are not in increasing orders
    */
-  async addRecord(key, data) {
+  async addRecord(key, value) {
     if (typeof key === 'number') {
       if (key > Number.MAX_SAFE_INTEGER) {
         throw new Error(`Key is bigger than MAX_SAFE_INTEGER. Use BigInt instead.`)
@@ -122,12 +122,12 @@ export class RangeDBBuilder {
     this.lastKey = key
 
     let buffer
-    if (Buffer.isBuffer(data)) {
-      buffer = data
-    } else if (typeof data === 'object' && data !== null) {
-      buffer = Buffer.from(JSON.stringify(data))
-    } else if (typeof data === 'string') {
-      buffer = Buffer.from(data)
+    if (Buffer.isBuffer(value)) {
+      buffer = value
+    } else if (typeof value === 'object' && value !== null) {
+      buffer = Buffer.from(JSON.stringify(value))
+    } else if (typeof value === 'string') {
+      buffer = Buffer.from(value)
     }
 
     const recordLength = 8n + 4n + BigInt(buffer.byteLength)
